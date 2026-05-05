@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package metroid_media;
+
+// El servicio que recibirá el archivo
+service MediaService {
+  rpc SubirImagen (ImagenRequest) returns (ImagenResponse);
+}
+
+// DTO de Entrada: Lo que Java nos enviará
+message ImagenRequest {
+  string nombre_archivo = 1;
+  bytes datos_imagen = 2; // El archivo físico convertido a bytes
+}
+
+// DTO de Salida: Lo que le responderemos a Java
+message ImagenResponse {
+  bool exito = 1;
+  string mensaje = 2;
+  string ruta_archivo = 3;
+}

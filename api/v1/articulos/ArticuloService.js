@@ -1,7 +1,5 @@
 /**
- * Metroid Wiki - ArticuloService
- * Servicio de API REST para recuperar y crear artículos de la Metroid Wiki
- * Se conecta a MongoDB y expone endpoints para la obtención de artículos por ID y la creación de los mismos
+ * Metroid Wiki - ArticuloService (Refactorizado en 3 Capas)
  */
 require('dotenv').config();
 
@@ -9,17 +7,17 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 
-// Configuration from own .env
 const config = {
   port: process.env.PORT || 3001,
   mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017',
   dbName: process.env.DB_NAME || 'metroid_wiki_articulos'
 };
 
-// Create router
 const router = express.Router();
 
-// Article Schema
+// ==========================================
+// 1. CONFIGURACION DE BASE DE DATOS (Mongoose)
+// ==========================================
 const articleSchema = new mongoose.Schema({
   titulo: { type: String, required: true },
   juego: { type: String, required: true },
@@ -43,107 +41,184 @@ articleSchema.pre("findOneAndUpdate", function (next) {
 
 const Articulo = mongoose.model('Articulo', articleSchema);
 
-router.get('/', async (req, res) => {
-  try {
-    const articulos = await Articulo.find();
-
-    res.json({
-      total: articulos.length,
-      articulos
-    });
-  } catch (error) {
-    console.error('Error al obtener artículos:', error);
-    res.status(500).json({
-      error: 'Error interno del servidor',
-      message: 'Error al obtener los artículos'
-    });
+// ==========================================
+// 2. EXCEPCIONES ESPECIFICAS Y DTOs
+// ==========================================
+class MetroidException extends Error {
+  constructor(mensaje, statusCode) {
+    super(mensaje);
+    this.name = this.constructor.name;
+    this.statusCode = statusCode;
   }
-});
+}
 
-// GET /:id - Get article by unique ID
-router.get('/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-    
-    // Validate MongoDB ObjectId format
+class DocumentoNoEncontradoException extends MetroidException {
+  constructor(id) {
+    super(`No se encontró ningún artículo con el ID: ${id}`, 404);
+  }
+}
+
+class FormatoIdInvalidoException extends MetroidException {
+  constructor() {
+    super('El formato del ID no es válido', 400);
+  }
+}
+
+class CamposRequeridosFaltantesException extends MetroidException {
+  constructor(campos) {
+    super(`Los siguientes campos son requeridos: ${campos.join(', ')}`, 400);
+  }
+}
+
+class ErrorBaseDeDatosException extends MetroidException {
+  constructor(detalle) {
+    super(`Error en la operacion de base de datos: ${detalle}`, 500);
+  }
+}
+
+class ArticuloDTO {
+  constructor(modeloMongoose) {
+    this.id = modeloMongoose._id;
+    this.titulo = modeloMongoose.titulo;
+    this.juego = modeloMongoose.juego;
+    this.categoria = modeloMongoose.categoria;
+    this.descripcion = modeloMongoose.descripcion;
+    this.contenido = modeloMongoose.contenido;
+    this.imagen = modeloMongoose.imagen || '';
+    this.fechaCreacion = modeloMongoose.fechaCreacion;
+    this.fechaActualizacion = modeloMongoose.fechaActualizacion;
+  }
+}
+
+// ==========================================
+// 3. CAPA DE DATOS (Repositorio)
+// ==========================================
+const ArticuloRepository = {
+  obtenerTodos: async () => {
+    try {
+      return await Articulo.find();
+    } catch (error) {
+      throw new ErrorBaseDeDatosException(error.message);
+    }
+  },
+
+  obtenerPorId: async (id) => {
+    try {
+      return await Articulo.findById(id);
+    } catch (error) {
+      throw new ErrorBaseDeDatosException(error.message);
+    }
+  },
+
+  crear: async (datosArticulo) => {
+    try {
+      const nuevoArticulo = new Articulo(datosArticulo);
+      return await nuevoArticulo.save();
+    } catch (error) {
+      throw new ErrorBaseDeDatosException(error.message);
+    }
+  }
+};
+
+// ==========================================
+// 4. CAPA DE NEGOCIO (Servicio)
+// ==========================================
+const ArticuloLogicService = {
+  obtenerArticulos: async () => {
+    const articulos = await ArticuloRepository.obtenerTodos();
+    return articulos.map(art => new ArticuloDTO(art));
+  },
+
+  obtenerArticuloPorId: async (id) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
-      return res.status(400).json({ 
-        error: 'ID inválido',
-        message: 'El formato del ID no es válido' 
-      });
+      throw new FormatoIdInvalidoException();
     }
     
-    const articulo = await Articulo.findById(id);
+    const articulo = await ArticuloRepository.obtenerPorId(id);
     
     if (!articulo) {
-      return res.status(404).json({ 
-        error: 'Artículo no encontrado',
-        message: `No se encontró ningún artículo con el ID: ${id}` 
-      });
+      throw new DocumentoNoEncontradoException(id);
     }
     
-    res.json(articulo);
-  } catch (error) {
-    console.error('Error al obtener artículo:', error);
-    res.status(500).json({ 
-      error: 'Error interno del servidor',
-      message: 'Error al obtener el artículo' 
-    });
-  }
-});
+    return new ArticuloDTO(articulo);
+  },
 
-// POST / - Create new article
-router.post('/', async (req, res) => {
-  console.log("POST /articulos hit");
-  console.log("Body:", req.body);
-
-  try {
-    const { titulo, juego, categoria, descripcion, contenido, imagen } = req.body;
-    
-    // Validate required fields
+  crearArticulo: async (datos) => {
     const requiredFields = ['titulo', 'juego', 'categoria', 'descripcion', 'contenido'];
-    const missingFields = requiredFields.filter(field => !req.body[field]);
+    const missingFields = requiredFields.filter(field => !datos[field]);
     
     if (missingFields.length > 0) {
-      return res.status(400).json({ 
-        error: 'Campos requeridos faltantes',
-        message: `Los siguientes campos son requeridos: ${missingFields.join(', ')}` 
-      });
+      throw new CamposRequeridosFaltantesException(missingFields);
     }
     
-    // Create new article
-    const nuevoArticulo = new Articulo({
-      titulo,
-      juego,
-      categoria,
-      descripcion,
-      contenido,
-      imagen: imagen || ''
+    const articuloGuardado = await ArticuloRepository.crear(datos);
+    return new ArticuloDTO(articuloGuardado);
+  }
+};
+
+// ==========================================
+// 5. CAPA DE PRESENTACION (Controladores HTTP)
+// ==========================================
+function manejarExcepcionHTTP(error, res) {
+  if (error instanceof MetroidException) {
+    return res.status(error.statusCode).json({
+      error: error.name,
+      message: error.message
     });
-    
-    const articuloGuardado = await nuevoArticulo.save();
-    
-    res.status(201).json({
-      message: 'Artículo creado exitosamente',
-      articulo: articuloGuardado
+  }
+  console.error('Excepcion no controlada:', error);
+  res.status(500).json({
+    error: 'ErrorCriticoDelServidor',
+    message: 'Se produjo un error inesperado en la ejecución.'
+  });
+}
+
+router.get('/', async (req, res) => {
+  try {
+    const articulosDTO = await ArticuloLogicService.obtenerArticulos();
+    res.json({
+      total: articulosDTO.length,
+      articulos: articulosDTO
     });
   } catch (error) {
-    console.error('Error al crear artículo:', error);
-    res.status(500).json({ 
-      error: 'Error interno del servidor',
-      message: 'Error al crear el artículo' 
-    });
+    manejarExcepcionHTTP(error, res);
   }
 });
 
-// Export router and connection function
+router.get('/:id', async (req, res) => {
+  try {
+    const articuloDTO = await ArticuloLogicService.obtenerArticuloPorId(req.params.id);
+    res.json(articuloDTO);
+  } catch (error) {
+    manejarExcepcionHTTP(error, res);
+  }
+});
+
+router.post('/', async (req, res) => {
+  console.log("POST /articulos hit");
+  try {
+    const articuloDTO = await ArticuloLogicService.crearArticulo(req.body);
+    res.status(201).json({
+      message: 'Articulo creado exitosamente',
+      articulo: articuloDTO
+    });
+  } catch (error) {
+    manejarExcepcionHTTP(error, res);
+  }
+});
+
+// ==========================================
+// 6. INICIO DEL SERVIDOR
+// ==========================================
+const { iniciarServidorGrpc } = require('./grpc/GrpcServer');
 module.exports = { router, config };
 
-// Start standalone microservice
 async function startServer() {
   try {
+    // Conectar a MongoDB
     await mongoose.connect(`${config.mongoUri}/${config.dbName}`);
     
+    // Iniciar Express (REST)
     const app = express();
     app.use(express.json());
     app.use(cors());
@@ -152,14 +227,17 @@ async function startServer() {
     app.listen(config.port, () => {
       console.log(`Metroid Wiki Article Service running on port ${config.port}`);
       console.log(`Database: ${config.dbName}`);
+      
+      // Iniciar gRPC una vez que Express y Mongo están listos
+      iniciarServidorGrpc();
     });
   } catch (error) {
+    // Aquí no usamos nuestra MetroidException porque es un error de arranque crítico, no de una petición HTTP
     console.error('Failed to start Article Service:', error);
     process.exit(1);
   }
 }
 
-// Start if run directly
 if (require.main === module) {
   startServer();
 }

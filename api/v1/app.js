@@ -8,12 +8,14 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { createProxyMiddleware } = require('http-proxy-middleware');
+const path = require('path');
 const config = require('./config');
 
 // Express app setup
 const app = express();
 app.use(express.json());
 app.use(cors());
+app.use('/public', express.static(path.join(__dirname, 'api', 'v1', 'articulos', 'public')));
 
 // Health check endpoint
 app.get('/health', (req, res) => {
