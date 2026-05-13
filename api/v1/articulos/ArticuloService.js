@@ -1,11 +1,12 @@
 /**
- * Metroid Wiki - ArticuloService (Refactorizado en 3 Capas + Swagger)
+ * Metroid Wiki - ArticuloService (Refactorizado en 3 Capas + Swagger + JWT)
  */
 require('dotenv').config();
 
 const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
 
 const config = {
   port: process.env.PORT || 3001,
@@ -16,7 +17,44 @@ const config = {
 const router = express.Router();
 
 // ==========================================
-// NUEVO: CONFIGURACION DE SWAGGER
+// MIDDLEWARE DE SEGURIDAD (El Guardia Blindado)
+// ==========================================
+const verificarPermisos = (rolesPermitidos) => {
+  return (req, res, next) => {
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    
+    if (!authHeader) {
+      return res.status(403).json({ message: "No se proporcionó un token de seguridad." });
+    }
+
+    try {
+      let tokenLimpio = authHeader;
+      
+      if (authHeader.toLowerCase().startsWith('bearer ')) {
+        const partes = authHeader.split(' ');
+        tokenLimpio = partes[1]; 
+      }
+
+      if (!tokenLimpio) {
+         return res.status(401).json({ message: "El token proporcionado está vacío o mal formado." });
+      }
+
+      const decoded = jwt.verify(tokenLimpio, 'firma_super_secreta_metroid');
+      req.user = decoded;
+
+      if (rolesPermitidos && !rolesPermitidos.includes(decoded.rol)) {
+        return res.status(403).json({ message: "Acceso denegado: No tienes los permisos necesarios." });
+      }
+      
+      next();
+    } catch (error) {
+      return res.status(401).json({ message: "Token inválido o expirado.", detalle: error.message });
+    }
+  };
+};
+
+// ==========================================
+// CONFIGURACION DE SWAGGER (CERRADURA OFICIAL)
 // ==========================================
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
@@ -34,7 +72,17 @@ const swaggerOptions = {
         url: 'http://localhost:3000',
         description: 'API Gateway Local'
       }
-    ]
+    ],
+    // NUEVO: Le decimos a Swagger que usamos Tokens Bearer (Aparecerá el botón Authorize)
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        }
+      }
+    }
   },
   apis: ['./ArticuloService.js'], 
 };
@@ -204,7 +252,7 @@ function manejarExcepcionHTTP(error, res) {
  * @swagger
  * /articulos:
  *   get:
- *     summary: Obtiene todos los articulos de la Wiki
+ *     summary: Obtiene todos los articulos de la Wiki (Público)
  *     responses:
  *       200:
  *         description: Exito. Devuelve el total y el arreglo de articulos.
@@ -225,7 +273,7 @@ router.get('/', async (req, res) => {
  * @swagger
  * /articulos/{id}:
  *   get:
- *     summary: Obtiene un articulo por su ID
+ *     summary: Obtiene un articulo por su ID (Público)
  *     parameters:
  *       - in: path
  *         name: id
@@ -252,7 +300,9 @@ router.get('/:id', async (req, res) => {
  * @swagger
  * /articulos:
  *   post:
- *     summary: Crea un nuevo articulo en la base de datos
+ *     summary: Crea un nuevo articulo en la base de datos (Protegido - Requiere Token)
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -278,11 +328,10 @@ router.get('/:id', async (req, res) => {
  *     responses:
  *       201:
  *         description: Articulo creado exitosamente.
- *       400:
- *         description: Faltan campos requeridos o ID invalido.
+ *       403:
+ *         description: Token no proporcionado o permisos insuficientes.
  */
-router.post('/', async (req, res) => {
-  console.log("POST /articulos hit");
+router.post('/', verificarPermisos(['Administrador', 'Editor']), async (req, res) => {
   try {
     const articuloDTO = await ArticuloLogicService.crearArticulo(req.body);
     res.status(201).json({
@@ -302,10 +351,8 @@ module.exports = { router, config };
 
 async function startServer() {
   try {
-    // Conectar a MongoDB
     await mongoose.connect(`${config.mongoUri}/${config.dbName}`);
     
-    // Iniciar Express (REST)
     const app = express();
     app.use(express.json());
     app.use(cors());
@@ -315,11 +362,9 @@ async function startServer() {
       console.log(`Metroid Wiki Article Service running on port ${config.port}`);
       console.log(`Database: ${config.dbName}`);
       
-      // Iniciar gRPC una vez que Express y Mongo estan listos
       iniciarServidorGrpc();
     });
   } catch (error) {
-    // Aqui no usamos nuestra MetroidException porque es un error de arranque critico, no de una peticion HTTP
     console.error('Failed to start Article Service:', error);
     process.exit(1);
   }
