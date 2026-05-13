@@ -1,5 +1,5 @@
 /**
- * Metroid Wiki - ArticuloService (Refactorizado en 3 Capas)
+ * Metroid Wiki - ArticuloService (Refactorizado en 3 Capas + Swagger)
  */
 require('dotenv').config();
 
@@ -14,6 +14,33 @@ const config = {
 };
 
 const router = express.Router();
+
+// ==========================================
+// NUEVO: CONFIGURACION DE SWAGGER
+// ==========================================
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsDoc = require('swagger-jsdoc');
+
+const swaggerOptions = {
+  definition: {
+    openapi: '3.0.0',
+    info: {
+      title: 'Metroid Wiki API',
+      version: '1.0.0',
+      description: 'Documentacion interactiva de los servicios REST',
+    },
+    servers: [
+      { 
+        url: 'http://localhost:3000',
+        description: 'API Gateway Local'
+      }
+    ]
+  },
+  apis: ['./ArticuloService.js'], 
+};
+
+const swaggerDocs = swaggerJsDoc(swaggerOptions);
+router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // ==========================================
 // 1. CONFIGURACION DE BASE DE DATOS (Mongoose)
@@ -54,13 +81,13 @@ class MetroidException extends Error {
 
 class DocumentoNoEncontradoException extends MetroidException {
   constructor(id) {
-    super(`No se encontró ningún artículo con el ID: ${id}`, 404);
+    super(`No se encontro ningun articulo con el ID: ${id}`, 404);
   }
 }
 
 class FormatoIdInvalidoException extends MetroidException {
   constructor() {
-    super('El formato del ID no es válido', 400);
+    super('El formato del ID no es valido', 400);
   }
 }
 
@@ -169,10 +196,19 @@ function manejarExcepcionHTTP(error, res) {
   console.error('Excepcion no controlada:', error);
   res.status(500).json({
     error: 'ErrorCriticoDelServidor',
-    message: 'Se produjo un error inesperado en la ejecución.'
+    message: 'Se produjo un error inesperado en la ejecucion.'
   });
 }
 
+/**
+ * @swagger
+ * /articulos:
+ *   get:
+ *     summary: Obtiene todos los articulos de la Wiki
+ *     responses:
+ *       200:
+ *         description: Exito. Devuelve el total y el arreglo de articulos.
+ */
 router.get('/', async (req, res) => {
   try {
     const articulosDTO = await ArticuloLogicService.obtenerArticulos();
@@ -185,6 +221,24 @@ router.get('/', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /articulos/{id}:
+ *   get:
+ *     summary: Obtiene un articulo por su ID
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID unico del articulo en MongoDB
+ *     responses:
+ *       200:
+ *         description: Exito.
+ *       404:
+ *         description: Articulo no encontrado.
+ */
 router.get('/:id', async (req, res) => {
   try {
     const articuloDTO = await ArticuloLogicService.obtenerArticuloPorId(req.params.id);
@@ -194,6 +248,39 @@ router.get('/:id', async (req, res) => {
   }
 });
 
+/**
+ * @swagger
+ * /articulos:
+ *   post:
+ *     summary: Crea un nuevo articulo en la base de datos
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               titulo:
+ *                 type: string
+ *                 example: "Samus Aran"
+ *               juego:
+ *                 type: string
+ *                 example: "Metroid Prime"
+ *               categoria:
+ *                 type: string
+ *                 example: "Personaje"
+ *               descripcion:
+ *                 type: string
+ *                 example: "Cazarrecompensas"
+ *               contenido:
+ *                 type: string
+ *                 example: "Historia completa..."
+ *     responses:
+ *       201:
+ *         description: Articulo creado exitosamente.
+ *       400:
+ *         description: Faltan campos requeridos o ID invalido.
+ */
 router.post('/', async (req, res) => {
   console.log("POST /articulos hit");
   try {
@@ -228,11 +315,11 @@ async function startServer() {
       console.log(`Metroid Wiki Article Service running on port ${config.port}`);
       console.log(`Database: ${config.dbName}`);
       
-      // Iniciar gRPC una vez que Express y Mongo están listos
+      // Iniciar gRPC una vez que Express y Mongo estan listos
       iniciarServidorGrpc();
     });
   } catch (error) {
-    // Aquí no usamos nuestra MetroidException porque es un error de arranque crítico, no de una petición HTTP
+    // Aqui no usamos nuestra MetroidException porque es un error de arranque critico, no de una peticion HTTP
     console.error('Failed to start Article Service:', error);
     process.exit(1);
   }
