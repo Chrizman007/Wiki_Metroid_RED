@@ -19,39 +19,6 @@ const router = express.Router();
 // ==========================================
 // MIDDLEWARE DE SEGURIDAD (El Guardia Blindado)
 // ==========================================
-const verificarPermisos = (rolesPermitidos) => {
-  return (req, res, next) => {
-    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-    
-    if (!authHeader) {
-      return res.status(403).json({ message: "No se proporcionó un token de seguridad." });
-    }
-
-    try {
-      let tokenLimpio = authHeader;
-      
-      if (authHeader.toLowerCase().startsWith('bearer ')) {
-        const partes = authHeader.split(' ');
-        tokenLimpio = partes[1]; 
-      }
-
-      if (!tokenLimpio) {
-         return res.status(401).json({ message: "El token proporcionado está vacío o mal formado." });
-      }
-
-      const decoded = jwt.verify(tokenLimpio, 'firma_super_secreta_metroid');
-      req.user = decoded;
-
-      if (rolesPermitidos && !rolesPermitidos.includes(decoded.rol)) {
-        return res.status(403).json({ message: "Acceso denegado: No tienes los permisos necesarios." });
-      }
-      
-      next();
-    } catch (error) {
-      return res.status(401).json({ message: "Token inválido o expirado.", detalle: error.message });
-    }
-  };
-};
 
 // ==========================================
 // CONFIGURACION DE SWAGGER (CERRADURA OFICIAL)
@@ -93,107 +60,16 @@ router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 // ==========================================
 // 1. CONFIGURACION DE BASE DE DATOS (Mongoose)
 // ==========================================
-const articleSchema = new mongoose.Schema({
-  titulo: { type: String, required: true },
-  juego: { type: String, required: true },
-  categoria: { type: String, required: true },
-  descripcion: { type: String, required: true },
-  contenido: { type: String, required: true },
-  imagen: { type: String },
-  fechaCreacion: { type: Date, default: Date.now },
-  fechaActualizacion: { type: Date, default: Date.now }
-});
-
-articleSchema.pre("save", function (next) {
-  this.fechaActualizacion = Date.now();
-  next();
-});
-
-articleSchema.pre("findOneAndUpdate", function (next) {
-  this.set({ fechaActualizacion: Date.now() });
-  next();
-});
 
 const Articulo = mongoose.model('Articulo', articleSchema);
 
 // ==========================================
 // 2. EXCEPCIONES ESPECIFICAS Y DTOs
 // ==========================================
-class MetroidException extends Error {
-  constructor(mensaje, statusCode) {
-    super(mensaje);
-    this.name = this.constructor.name;
-    this.statusCode = statusCode;
-  }
-}
-
-class DocumentoNoEncontradoException extends MetroidException {
-  constructor(id) {
-    super(`No se encontro ningun articulo con el ID: ${id}`, 404);
-  }
-}
-
-class FormatoIdInvalidoException extends MetroidException {
-  constructor() {
-    super('El formato del ID no es valido', 400);
-  }
-}
-
-class CamposRequeridosFaltantesException extends MetroidException {
-  constructor(campos) {
-    super(`Los siguientes campos son requeridos: ${campos.join(', ')}`, 400);
-  }
-}
-
-class ErrorBaseDeDatosException extends MetroidException {
-  constructor(detalle) {
-    super(`Error en la operacion de base de datos: ${detalle}`, 500);
-  }
-}
-
-class ArticuloDTO {
-  constructor(modeloMongoose) {
-    this.id = modeloMongoose._id;
-    this.titulo = modeloMongoose.titulo;
-    this.juego = modeloMongoose.juego;
-    this.categoria = modeloMongoose.categoria;
-    this.descripcion = modeloMongoose.descripcion;
-    this.contenido = modeloMongoose.contenido;
-    this.imagen = modeloMongoose.imagen || '';
-    this.fechaCreacion = modeloMongoose.fechaCreacion;
-    this.fechaActualizacion = modeloMongoose.fechaActualizacion;
-  }
-}
 
 // ==========================================
 // 3. CAPA DE DATOS (Repositorio)
 // ==========================================
-const ArticuloRepository = {
-  obtenerTodos: async () => {
-    try {
-      return await Articulo.find();
-    } catch (error) {
-      throw new ErrorBaseDeDatosException(error.message);
-    }
-  },
-
-  obtenerPorId: async (id) => {
-    try {
-      return await Articulo.findById(id);
-    } catch (error) {
-      throw new ErrorBaseDeDatosException(error.message);
-    }
-  },
-
-  crear: async (datosArticulo) => {
-    try {
-      const nuevoArticulo = new Articulo(datosArticulo);
-      return await nuevoArticulo.save();
-    } catch (error) {
-      throw new ErrorBaseDeDatosException(error.message);
-    }
-  }
-};
 
 // ==========================================
 // 4. CAPA DE NEGOCIO (Servicio)
