@@ -1,5 +1,6 @@
 /**
  * Metroid Wiki - UsuarioService (Servicio de Autenticación)
+ * API del Microservicio de Usuarios y Seguridad conectado a MongoDB Atlas
  */
 require('dotenv').config();
 
@@ -10,16 +11,17 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const config = {
-  port: process.env.PORT_AUTH || 3002, // Correrá en un puerto independiente
-  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017',
-  dbName: process.env.DB_NAME || 'metroid_wiki_usuarios',
+  // Prioriza el puerto 3002 configurado en tu .env
+  port: process.env.PORT || process.env.PORT_AUTH || 3002, 
+  // Lee la URL de la nube de MongoDB Atlas de tu .env
+  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/metroid_wiki_usuarios',
   jwtSecret: process.env.JWT_SECRET || 'firma_super_secreta_metroid'
 };
 
 const router = express.Router();
 
 // ==========================================
-// NUEVO: CONFIGURACION DE SWAGGER
+// CONFIGURACIÓN DE SWAGGER
 // ==========================================
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
@@ -32,7 +34,7 @@ const swaggerOptions = {
       version: '1.0.0',
       description: 'Sistema de Seguridad y Usuarios',
     },
-    servers: [{ url: 'http://localhost:3002' }]
+    servers: [{ url: `http://localhost:${config.port}` }]
   },
   apis: ['./UsuarioService.js'], 
 };
@@ -47,17 +49,15 @@ const usuarioSchema = new mongoose.Schema({
   nombre: { type: String, required: true },
   correo: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  // Aquí están los roles de tu diagrama de clases:
-  rol: { type: String, enum: ['Administrador', 'Editor', 'Lector'], default: 'Lector' },
+  // Actualizado a los 3 roles oficiales solicitados en minúsculas para consistencia
+  rol: { type: String, enum: ['lector', 'administrador', 'desarrollador'], default: 'lector' },
   fechaRegistro: { type: Date, default: Date.now }
 });
 
 // Middleware ("Hook"): Antes de guardar en la BD, encriptamos la contraseña
 usuarioSchema.pre('save', async function() {
-  // Si la contraseña no ha sido modificada, no hacemos nada
   if (!this.isModified('password')) return;
   
-  // "Salteamos" y encriptamos la contraseña (sin usar 'next')
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
 });
@@ -65,7 +65,7 @@ usuarioSchema.pre('save', async function() {
 const Usuario = mongoose.model('Usuario', usuarioSchema);
 
 // ==========================================
-// 2. EXCEPCIONES ESPECIFICAS Y DTOs
+// 2. EXCEPCIONES ESPECÍFICAS Y DTOs
 // ==========================================
 class MetroidAuthException extends Error {
   constructor(mensaje, statusCode) {
@@ -93,7 +93,7 @@ class FaltanDatosAuthException extends MetroidAuthException {
   }
 }
 
-// DTO: Filtramos la información. ¡NUNCA enviamos el password de vuelta al cliente!
+// DTO: ¡NUNCA enviamos el password de vuelta al cliente!
 class UsuarioDTO {
   constructor(modeloMongoose) {
     this.id = modeloMongoose._id;
@@ -121,7 +121,7 @@ const AuthLogicService = {
       nombre: datos.nombre,
       correo: datos.correo,
       password: datos.password,
-      rol: datos.rol || 'Lector' 
+      rol: datos.rol || 'lector' 
     });
 
     await nuevoUsuario.save();
@@ -133,19 +133,16 @@ const AuthLogicService = {
       throw new FaltanDatosAuthException(['correo', 'password']);
     }
 
-    // Buscamos al usuario por correo
     const usuario = await Usuario.findOne({ correo });
     if (!usuario) {
       throw new CredencialesInvalidasException();
     }
 
-    // Comparamos el password de texto plano con el encriptado en la BD
     const esPasswordValido = await bcrypt.compare(password, usuario.password);
     if (!esPasswordValido) {
       throw new CredencialesInvalidasException();
     }
 
-    // Generamos el Token JWT (El "Gafete") que durará 2 horas
     const token = jwt.sign(
       { id: usuario._id, rol: usuario.rol },
       config.jwtSecret,
@@ -238,10 +235,14 @@ router.post('/registro', async (req, res) => {
 router.post('/login', async (req, res) => {
   try {
     const authData = await AuthLogicService.iniciarSesion(req.body.correo, req.body.password);
+    
+    // Armamos el JSON exactamente para Java
     res.status(200).json({
       message: 'Login exitoso',
-      ...authData 
+      token: authData.token,
+      nombre: authData.usuario.nombre 
     });
+    
   } catch (error) {
     manejarExcepcionAuthHTTP(error, res);
   }
@@ -252,16 +253,20 @@ router.post('/login', async (req, res) => {
 // ==========================================
 async function startAuthServer() {
   try {
-    await mongoose.connect(`${config.mongoUri}/${config.dbName}`);
+
+    console.log("🕵️ Ruta REAL de conexión:", config.mongoUri);
+    // Conexión directa y limpia usando la URI completa de MongoDB Atlas
+    await mongoose.connect(config.mongoUri);
+    console.log('¡Conectado exitosamente a MongoDB Atlas en la nube!');
     
     const app = express();
     app.use(express.json());
     app.use(cors());
-    app.use('/auth', router); // Todas las rutas empezarán con /auth
+    app.use('/auth', router); 
     
     app.listen(config.port, () => {
       console.log(`Metroid Wiki Auth Service running on port ${config.port}`);
-      console.log(`Database: ${config.dbName}`);
+      console.log(`Swagger docs available at: http://localhost:${config.port}/auth/api-docs`);
     });
   } catch (error) {
     console.error('Failed to start Auth Service:', error);
