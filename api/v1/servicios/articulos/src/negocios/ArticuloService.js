@@ -1,5 +1,6 @@
 /**
- * Metroid Wiki - ArticuloService (Refactorizado en 3 Capas + Swagger + JWT)
+ * Metroid Wiki - ArticuloService (Capa de Artículos Conectada a la Nube)
+ * API del Microservicio de Artículos con validación JWT y MongoDB Atlas
  */
 require('dotenv').config();
 
@@ -9,9 +10,10 @@ const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
 const config = {
+  // Prioriza el puerto 3003 o 3001 configurado en tu .env
   port: process.env.PORT || 3001,
-  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017',
-  dbName: process.env.DB_NAME || 'metroid_wiki_articulos'
+  // Lee la URL de la nube de MongoDB Atlas de tu .env (Ya incluye articulos_db)
+  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/metroid_wiki_articulos'
 };
 
 const router = express.Router();
@@ -19,6 +21,40 @@ const router = express.Router();
 // ==========================================
 // MIDDLEWARE DE SEGURIDAD (El Guardia Blindado)
 // ==========================================
+const verificarPermisos = (rolesPermitidos) => {
+  return (req, res, next) => {
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    
+    if (!authHeader) {
+      return res.status(403).json({ message: "No se proporcionó un token de seguridad." });
+    }
+
+    try {
+      let tokenLimpio = authHeader;
+      
+      if (authHeader.toLowerCase().startsWith('bearer ')) {
+        const partes = authHeader.split(' ');
+        tokenLimpio = partes[1]; 
+      }
+
+      if (!tokenLimpio) {
+         return res.status(401).json({ message: "El token proporcionado está vacío o mal formado." });
+      }
+
+      // Desencripta el gafete usando la misma firma que el Servicio de Usuarios
+      const decoded = jwt.verify(tokenLimpio, process.env.JWT_SECRET || 'firma_super_secreta_metroid');
+      req.user = decoded; // Guardamos los datos del usuario (id y rol) en la petición
+
+      if (rolesPermitidos && !rolesPermitidos.includes(decoded.rol)) {
+        return res.status(403).json({ message: `Acceso denegado: Requiere rol [${rolesPermitidos.join(', ')}]. Tu rol es: ${decoded.rol}` });
+      }
+      
+      next();
+    } catch (error) {
+      return res.status(401).json({ message: "Token inválido o expirado.", detalle: error.message });
+    }
+  };
+};
 
 // ==========================================
 // CONFIGURACION DE SWAGGER (CERRADURA OFICIAL)
@@ -30,17 +66,11 @@ const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
-      title: 'Metroid Wiki API',
+      title: 'Metroid Wiki Artículos API',
       version: '1.0.0',
-      description: 'Documentacion interactiva de los servicios REST',
+      description: 'Documentación interactiva de los artículos y lore',
     },
-    servers: [
-      { 
-        url: 'http://localhost:3000',
-        description: 'API Gateway Local'
-      }
-    ],
-    // NUEVO: Le decimos a Swagger que usamos Tokens Bearer (Aparecerá el botón Authorize)
+    servers: [{ url: `http://localhost:${config.port}` }],
     components: {
       securitySchemes: {
         bearerAuth: {
@@ -58,18 +88,116 @@ const swaggerDocs = swaggerJsDoc(swaggerOptions);
 router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
 // ==========================================
-// 1. CONFIGURACION DE BASE DE DATOS (Mongoose)
+// 1. CONFIGURACION DE BASE DE DATOS (Mongoose + UML)
 // ==========================================
+const articleSchema = new mongoose.Schema({
+  titulo: { type: String, required: true, unique: true, trim: true },
+  descripcion: { type: String, required: true, trim: true },
+  contenido: { type: String, required: true },
+  categoria: { 
+    type: String, 
+    enum: ['Lore', 'Items', 'Enemigos', 'ubicaciones', 'personajes'], 
+    required: true 
+  },
+  estado: { 
+    type: String, 
+    enum: ['EnBorrador', 'EnRevision', 'Publicado', 'Archivado'], 
+    default: 'EnBorrador' 
+  },
+  vistas: { type: Number, default: 0 },
+  imagen: { type: String }, // Para la ruta de gRPC más adelante
+  autorId: { type: mongoose.Schema.Types.ObjectId, required: true }
+}, {
+  timestamps: true // Esto genera automáticamente createdAt y updatedAt
+});
 
 const Articulo = mongoose.model('Articulo', articleSchema);
 
 // ==========================================
 // 2. EXCEPCIONES ESPECIFICAS Y DTOs
 // ==========================================
+class MetroidException extends Error {
+  constructor(mensaje, statusCode) {
+    super(mensaje);
+    this.name = this.constructor.name;
+    this.statusCode = statusCode;
+  }
+}
+
+class DocumentoNoEncontradoException extends MetroidException {
+  constructor(id) {
+    super(`No se encontro ningun articulo con el ID: ${id}`, 404);
+  }
+}
+
+class FormatoIdInvalidoException extends MetroidException {
+  constructor() {
+    super('El formato del ID no es valido', 400);
+  }
+}
+
+class CamposRequeridosFaltantesException extends MetroidException {
+  constructor(campos) {
+    super(`Los siguientes campos son requeridos: ${campos.join(', ')}`, 400);
+  }
+}
+
+class ErrorBaseDeDatosException extends MetroidException {
+  constructor(detalle) {
+    super(`Error en la operacion de base de datos: ${detalle}`, 500);
+  }
+}
+
+// DTO actualizado con el modelo de clases
+class ArticuloDTO {
+  constructor(modeloMongoose) {
+    this.id = modeloMongoose._id;
+    this.titulo = modeloMongoose.titulo;
+    this.categoria = modeloMongoose.categoria;
+    this.descripcion = modeloMongoose.descripcion;
+    this.contenido = modeloMongoose.contenido;
+    this.estado = modeloMongoose.estado;
+    this.vistas = modeloMongoose.vistas;
+    this.imagen = modeloMongoose.imagen || '';
+    this.autorId = modeloMongoose.autorId;
+    this.fechaCreacion = modeloMongoose.createdAt;
+    this.fechaActualizacion = modeloMongoose.updatedAt;
+  }
+}
 
 // ==========================================
 // 3. CAPA DE DATOS (Repositorio)
 // ==========================================
+const ArticuloRepository = {
+  obtenerTodos: async () => {
+    try {
+      return await Articulo.find();
+    } catch (error) {
+      throw new ErrorBaseDeDatosException(error.message);
+    }
+  },
+
+  obtenerPorId: async (id) => {
+    try {
+      return await Articulo.findById(id);
+    } catch (error) {
+      throw new ErrorBaseDeDatosException(error.message);
+    }
+  },
+
+  crear: async (datosArticulo) => {
+    try {
+      const nuevoArticulo = new Articulo(datosArticulo);
+      return await nuevoArticulo.save();
+    } catch (error) {
+      // Manejo de error si se intenta guardar un título duplicado
+      if (error.code === 11000) {
+          throw new ErrorBaseDeDatosException("Ya existe un artículo con ese título.");
+      }
+      throw new ErrorBaseDeDatosException(error.message);
+    }
+  }
+};
 
 // ==========================================
 // 4. CAPA DE NEGOCIO (Servicio)
@@ -95,7 +223,8 @@ const ArticuloLogicService = {
   },
 
   crearArticulo: async (datos) => {
-    const requiredFields = ['titulo', 'juego', 'categoria', 'descripcion', 'contenido'];
+    // Validar campos estrictos
+    const requiredFields = ['titulo', 'categoria', 'descripcion', 'contenido', 'autorId'];
     const missingFields = requiredFields.filter(field => !datos[field]);
     
     if (missingFields.length > 0) {
@@ -207,8 +336,10 @@ router.get('/:id', async (req, res) => {
  *       403:
  *         description: Token no proporcionado o permisos insuficientes.
  */
-router.post('/', verificarPermisos(['Administrador', 'Editor']), async (req, res) => {
+router.post('/', verificarPermisos(['administrador', 'desarrollador']), async (req, res) => {
   try {
+    req.body.autorId = req.user.id; 
+
     const articuloDTO = await ArticuloLogicService.crearArticulo(req.body);
     res.status(201).json({
       message: 'Articulo creado exitosamente',
@@ -222,12 +353,20 @@ router.post('/', verificarPermisos(['Administrador', 'Editor']), async (req, res
 // ==========================================
 // 6. INICIO DEL SERVIDOR
 // ==========================================
-const { iniciarServidorGrpc } = require('../../grpc/GrpcServer');
+// (Se asume que la carpeta grpc existe como lo definió tu compañera)
+let iniciarServidorGrpc = () => { console.log("Servidor gRPC omitido por ahora."); };
+try {
+    const grpcModule = require('../../grpc/GrpcServer');
+    if(grpcModule.iniciarServidorGrpc) iniciarServidorGrpc = grpcModule.iniciarServidorGrpc;
+} catch(e) {} // Captura silenciosa por si aún no programan el archivo gRPC
+
 module.exports = { router, config };
 
 async function startServer() {
   try {
-    await mongoose.connect(`${config.mongoUri}/${config.dbName}`);
+    // Conexión directa y limpia usando la URI completa del .env
+    await mongoose.connect(config.mongoUri);
+    console.log('¡Conectado exitosamente a MongoDB Atlas (Artículos)!');
     
     const app = express();
     app.use(express.json());
@@ -236,7 +375,7 @@ async function startServer() {
     
     app.listen(config.port, () => {
       console.log(`Metroid Wiki Article Service running on port ${config.port}`);
-      console.log(`Database: ${config.dbName}`);
+      console.log(`Swagger docs available at: http://localhost:${config.port}/articulos/api-docs`);
       
       iniciarServidorGrpc();
     });
