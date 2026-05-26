@@ -1,6 +1,6 @@
 /**
  * Metroid Wiki - ArticuloService (Capa de Artículos Conectada a la Nube)
- * API del Microservicio de Artículos con validación JWT y MongoDB Atlas
+ * API del Microservicio de Artículos con validación JWT, MongoDB Atlas y gRPC
  */
 require('dotenv').config();
 
@@ -9,14 +9,35 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
+// 🛠️ LIBRERÍAS DE gRPC Y RUTAS
+const path = require('path');
+const fs = require('fs');
+const grpc = require('@grpc/grpc-js');
+const protoLoader = require('@grpc/proto-loader');
+
 const config = {
-  // Prioriza el puerto 3003 o 3001 configurado en tu .env
   port: process.env.PORT || 3001,
-  // Lee la URL de la nube de MongoDB Atlas de tu .env (Ya incluye articulos_db)
   mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/metroid_wiki_articulos'
 };
 
 const router = express.Router();
+
+// ==========================================
+// CONFIGURACIÓN DE gRPC (Carga del Contrato)
+// ==========================================
+// Subimos dos niveles (../../) para llegar de src/negocio a la raíz y entrar a proto/
+const PROTO_PATH = path.join(__dirname, '../../proto/media.proto');
+
+const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
+  keepCase: true,
+  longs: String,
+  enums: String,
+  defaults: true,
+  oneofs: true
+});
+
+// Cargamos el paquete "media" que definimos en el archivo .proto
+const mediaProto = grpc.loadPackageDefinition(packageDefinition).media;
 
 // ==========================================
 // MIDDLEWARE DE SEGURIDAD (El Guardia Blindado)
@@ -41,9 +62,8 @@ const verificarPermisos = (rolesPermitidos) => {
          return res.status(401).json({ message: "El token proporcionado está vacío o mal formado." });
       }
 
-      // Desencripta el gafete usando la misma firma que el Servicio de Usuarios
       const decoded = jwt.verify(tokenLimpio, process.env.JWT_SECRET || 'firma_super_secreta_metroid');
-      req.user = decoded; // Guardamos los datos del usuario (id y rol) en la petición
+      req.user = decoded; 
 
       if (rolesPermitidos && !rolesPermitidos.includes(decoded.rol)) {
         return res.status(403).json({ message: `Acceso denegado: Requiere rol [${rolesPermitidos.join(', ')}]. Tu rol es: ${decoded.rol}` });
@@ -81,7 +101,7 @@ const swaggerOptions = {
       }
     }
   },
-  apis: ['./ArticuloService.js'], 
+  apis: ['./src/negocio/ArticuloService.js'], 
 };
 
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
@@ -105,10 +125,10 @@ const articleSchema = new mongoose.Schema({
     default: 'EnBorrador' 
   },
   vistas: { type: Number, default: 0 },
-  imagen: { type: String }, // Para la ruta de gRPC más adelante
+  imagen: { type: String }, 
   autorId: { type: mongoose.Schema.Types.ObjectId, required: true }
 }, {
-  timestamps: true // Esto genera automáticamente createdAt y updatedAt
+  timestamps: true 
 });
 
 const Articulo = mongoose.model('Articulo', articleSchema);
@@ -148,7 +168,6 @@ class ErrorBaseDeDatosException extends MetroidException {
   }
 }
 
-// DTO actualizado con el modelo de clases
 class ArticuloDTO {
   constructor(modeloMongoose) {
     this.id = modeloMongoose._id;
@@ -190,7 +209,6 @@ const ArticuloRepository = {
       const nuevoArticulo = new Articulo(datosArticulo);
       return await nuevoArticulo.save();
     } catch (error) {
-      // Manejo de error si se intenta guardar un título duplicado
       if (error.code === 11000) {
           throw new ErrorBaseDeDatosException("Ya existe un artículo con ese título.");
       }
@@ -223,7 +241,6 @@ const ArticuloLogicService = {
   },
 
   crearArticulo: async (datos) => {
-    // Validar campos estrictos
     const requiredFields = ['titulo', 'categoria', 'descripcion', 'contenido', 'autorId'];
     const missingFields = requiredFields.filter(field => !datos[field]);
     
@@ -351,34 +368,95 @@ router.post('/', verificarPermisos(['administrador', 'desarrollador']), async (r
 });
 
 // ==========================================
-// 6. INICIO DEL SERVIDOR
+// 6. SERVIDOR gRPC (Lógica de Recepción de Imágenes)
 // ==========================================
-// (Se asume que la carpeta grpc existe como lo definió tu compañera)
-let iniciarServidorGrpc = () => { console.log("Servidor gRPC omitido por ahora."); };
-try {
-    const grpcModule = require('../../grpc/GrpcServer');
-    if(grpcModule.iniciarServidorGrpc) iniciarServidorGrpc = grpcModule.iniciarServidorGrpc;
-} catch(e) {} // Captura silenciosa por si aún no programan el archivo gRPC
+const subirImagenHandler = (call, callback) => {
+  let archivoNombre = '';
+  let articuloId = '';
+  let chunks = [];
 
+  // Cuando Java empieza a mandar los pedacitos de la imagen
+  call.on('data', (request) => {
+    articuloId = request.articuloId;
+    archivoNombre = request.nombreArchivo;
+    chunks.push(request.chunk); // Guardamos el pedazo de bytes
+  });
+
+  // Cuando Java nos avisa que ya mandó el último pedazo
+  call.on('end', () => {
+    try {
+      // Unimos todos los pedazos en un archivo físico
+      const imagenCompleta = Buffer.concat(chunks);
+      
+      // Construimos la ruta absoluta hacia tu carpeta public/imagenes (../../)
+      const directorioPublico = path.join(__dirname, '../../public/imagenes');
+      
+      // BONUS: Si por error borraste la carpeta, Node.js la crea sola
+      if (!fs.existsSync(directorioPublico)){
+          fs.mkdirSync(directorioPublico, { recursive: true });
+      }
+
+      // Guardamos la foto en el disco duro
+      const rutaDestino = path.join(directorioPublico, archivoNombre);
+      fs.writeFileSync(rutaDestino, imagenCompleta);
+      
+      console.log(`📸 [gRPC] Imagen guardada con éxito: ${archivoNombre}`);
+
+      // Respondemos a Java según el contrato media.proto
+      callback(null, {
+        exito: true,
+        mensaje: "Imagen recibida y guardada por el servidor de la Federación.",
+        urlImagen: `http://localhost:${config.port}/articulos/public/imagenes/${archivoNombre}`
+      });
+
+    } catch (error) {
+      console.error("❌ Fallo en gRPC al guardar la imagen:", error);
+      callback({
+        code: grpc.status.INTERNAL,
+        message: `Error interno al guardar: ${error.message}`
+      });
+    }
+  });
+};
+
+
+// ==========================================
+// 7. INICIO DE TODOS LOS SERVIDORES
+// ==========================================
 module.exports = { router, config };
 
 async function startServer() {
   try {
-    // Conexión directa y limpia usando la URI completa del .env
     await mongoose.connect(config.mongoUri);
     console.log('¡Conectado exitosamente a MongoDB Atlas (Artículos)!');
     
     const app = express();
     app.use(express.json());
     app.use(cors());
+    
+    // 🛠️ MAGIA: Hacemos que la carpeta física sea accesible desde una URL en el navegador
+    const directorioPublico = path.join(__dirname, '../../public/imagenes');
+    app.use('/articulos/public/imagenes', express.static(directorioPublico));
+
     app.use('/articulos', router);
     
     app.listen(config.port, () => {
-      console.log(`Metroid Wiki Article Service running on port ${config.port}`);
-      console.log(`Swagger docs available at: http://localhost:${config.port}/articulos/api-docs`);
-      
-      iniciarServidorGrpc();
+      console.log(`🌐 Metroid Wiki Article Service (REST) running on port ${config.port}`);
+      console.log(`📚 Swagger docs available at: http://localhost:${config.port}/articulos/api-docs`);
     });
+
+    // 🚀 ENCENDIDO DEL SERVIDOR gRPC
+    const grpcServer = new grpc.Server();
+    grpcServer.addService(mediaProto.MediaService.service, { SubirImagen: subirImagenHandler });
+    
+    grpcServer.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), (err, port) => {
+      if (err) {
+        console.error('❌ No se pudo arrancar el servidor gRPC:', err);
+        return;
+      }
+      console.log(`📸 Servidor gRPC (Multimedia) corriendo en el puerto: ${port}`);
+    });
+
   } catch (error) {
     console.error('Failed to start Article Service:', error);
     process.exit(1);
