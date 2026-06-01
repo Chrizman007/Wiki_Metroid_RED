@@ -2,8 +2,10 @@
   "name": "usuarios",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/negocios/UsuarioService.js",
   "scripts": {
+    "start": "node src/negocios/UsuarioService.js",
+    "dev": "node src/negocios/UsuarioService.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],

@@ -2,10 +2,10 @@
   "name": "metroid-wiki-articulos-service",
   "version": "1.0.0",
   "description": "Metroid Wiki - Article microservice",
-  "main": "ArticuloService.js",
+  "main": "src/negocios/ArticuloService.js",
   "scripts": {
-    "start": "node ArticuloService.js",
-    "dev": "node ArticuloService.js"
+    "start": "node src/negocios/ArticuloService.js",
+    "dev": "node src/negocios/ArticuloService.js"
   },
   "keywords": [
     "metroid",

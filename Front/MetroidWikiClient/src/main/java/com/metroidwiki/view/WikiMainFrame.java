@@ -1,5 +1,6 @@
 package com.metroidwiki.view;
 
+import com.metroidwiki.network.RetrofitClient;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -400,7 +401,7 @@ public class WikiMainFrame extends JFrame {
 
         // 🛠️ PARCHE: Reemplazamos los espacios físicos por "%20" para que Java no crashee
         String nombreCodificado = nombreImagen.replace(" ", "%20");
-        String urlCompleta = "http://localhost:3001/articulos/public/imagenes/" + nombreCodificado;
+        String urlCompleta = RetrofitClient.BASE_URL + "articulos/public/imagenes/" + nombreCodificado;
 
         SwingWorker<ImageIcon, Void> worker = new SwingWorker<>() {
             @Override

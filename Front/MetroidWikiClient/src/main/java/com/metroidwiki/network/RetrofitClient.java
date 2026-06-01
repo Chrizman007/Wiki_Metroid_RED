@@ -4,8 +4,8 @@ import retrofit2.Retrofit;
 import retrofit2.converter.gson.GsonConverterFactory;
 
 public class RetrofitClient {
-    // Es vital el slash '/' al final para que Retrofit no arroje IllegalArgumentException
-    private static final String BASE_URL = "http://localhost:3000/";
+    // Gateway Nginx centralizado para todos los servicios
+    public static final String BASE_URL = "http://localhost/";
     private static Retrofit retrofit = null;
 
     public static Retrofit getClient() {

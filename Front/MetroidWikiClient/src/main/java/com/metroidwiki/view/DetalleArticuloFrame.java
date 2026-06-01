@@ -1,6 +1,7 @@
 package com.metroidwiki.view;
 
 import com.metroidwiki.model.ArticuloDTO;
+import com.metroidwiki.network.RetrofitClient;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -305,7 +306,7 @@ public class DetalleArticuloFrame extends JFrame {
         }
 
         String nombreCodificado = nombreImagen.replace(" ", "%20");
-        String urlCompleta = "http://localhost:3001/articulos/public/imagenes/" + nombreCodificado;
+        String urlCompleta = RetrofitClient.BASE_URL + "articulos/public/imagenes/" + nombreCodificado;
 
         SwingWorker<ImageIcon, Void> worker = new SwingWorker<>() {
             @Override

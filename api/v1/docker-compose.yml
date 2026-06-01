@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  articulos:
+    build:
+      context: ./servicios/articulos
+    container_name: metroid_articulos
+    env_file:
+      - ./servicios/articulos/.env
+    ports:
+      - '3001:3001'
+    restart: unless-stopped
+
+  usuarios:
+    build:
+      context: ./servicios/usuarios
+    container_name: metroid_usuarios
+    env_file:
+      - ./servicios/usuarios/.env
+    ports:
+      - '3002:3002'
+    restart: unless-stopped
+
+  nginx:
+    image: nginx:latest
+    container_name: metroid_gateway
+    ports:
+      - '80:80'
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+    depends_on:
+      - articulos
+      - usuarios
+    restart: unless-stopped
