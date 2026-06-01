@@ -128,7 +128,7 @@ const AuthLogicService = {
     return new UsuarioDTO(nuevoUsuario);
   },
 
-  iniciarSesion: async (correo, password) => {
+  iniciarSesion: async (correo, password, rol) => {
     if (!correo || !password) {
       throw new FaltanDatosAuthException(['correo', 'password']);
     }
@@ -240,7 +240,8 @@ router.post('/login', async (req, res) => {
     res.status(200).json({
       message: 'Login exitoso',
       token: authData.token,
-      nombre: authData.usuario.nombre 
+      nombre: authData.usuario.nombre, 
+      rol: authData.usuario.rol
     });
     
   } catch (error) {
