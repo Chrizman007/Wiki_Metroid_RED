@@ -33,3 +33,15 @@ services:
       - articulos
       - usuarios
     restart: unless-stopped
+
+  comentarios:
+    build:
+      context: ./servicios/comentarios
+    container_name: metroid_comentarios
+    env_file:
+      - ./servicios/comentarios/.env
+    ports:
+      - '3004:3004'
+    depends_on:
+      - articulos
+    restart: unless-stopped

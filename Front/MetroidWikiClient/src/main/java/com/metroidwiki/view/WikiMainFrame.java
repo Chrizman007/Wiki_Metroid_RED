@@ -389,7 +389,7 @@ public class WikiMainFrame extends JFrame {
 
         // 🛠️ PARCHE: Le decimos que cuando den clic al botón, abra nuestra hermosa vista detallada
         btnLeer.addActionListener(e -> {
-            DetalleArticuloFrame vistaDetalle = new DetalleArticuloFrame(articulo);
+            DetalleArticuloFrame vistaDetalle = new DetalleArticuloFrame(articulo, tokenUsuarioActual, nombreUsuario);
             vistaDetalle.setVisible(true);
         });
 

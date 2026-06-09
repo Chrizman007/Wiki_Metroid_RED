@@ -144,7 +144,7 @@ const AuthLogicService = {
     }
 
     const token = jwt.sign(
-      { id: usuario._id, rol: usuario.rol },
+      { id: usuario._id, nombre: usuario.nombre, rol: usuario.rol },
       config.jwtSecret,
       { expiresIn: '2h' }
     );
