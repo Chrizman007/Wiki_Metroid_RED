@@ -8,10 +8,17 @@ import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
 import io.grpc.stub.StreamObserver;
 
+import javax.swing.SwingUtilities;
 import java.io.File;
 import java.io.FileInputStream;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class GrpcMediaClient {
+
+    public interface UploadListener {
+        void onSuccess(String urlImagen);
+        void onError(Throwable t);
+    }
 
     private final ManagedChannel channel;
     // 🛠️ CAMBIO CLAVE: Usamos el Stub Asíncrono para no congelar la pantalla de Java
@@ -26,23 +33,37 @@ public class GrpcMediaClient {
 
     // 🛠️ CAMBIO CLAVE: Método que pica la imagen en pedazos de 4KB (Stream)
     public void subirImagenArticulo(String idArticulo, File archivoImagen) {
+        subirImagenArticulo(idArticulo, archivoImagen, null);
+    }
+
+    public void subirImagenArticulo(String idArticulo, File archivoImagen, UploadListener listener) {
+        AtomicReference<String> urlImagenEnServidor = new AtomicReference<>(null);
 
         // Preparamos el "oído" para escuchar lo que nos responda Node.js
         StreamObserver<ImagenResponse> responseObserver = new StreamObserver<ImagenResponse>() {
             @Override
             public void onNext(ImagenResponse response) {
+                urlImagenEnServidor.set(response.getUrlImagen());
                 System.out.println("✅ [gRPC] Node.js dice: " + response.getMensaje());
                 System.out.println("🔗 URL en el servidor: " + response.getUrlImagen());
+                if (listener != null) {
+                    SwingUtilities.invokeLater(() -> listener.onSuccess(response.getUrlImagen()));
+                }
             }
 
             @Override
             public void onError(Throwable t) {
                 System.err.println("❌ [gRPC] Falló al enviar la imagen: " + t.getMessage());
+                if (listener != null) {
+                    SwingUtilities.invokeLater(() -> listener.onError(t));
+                }
+                apagarCanal();
             }
 
             @Override
             public void onCompleted() {
                 System.out.println("🏁 [gRPC] Imagen subida exitosamente.");
+                apagarCanal();
             }
         };
 

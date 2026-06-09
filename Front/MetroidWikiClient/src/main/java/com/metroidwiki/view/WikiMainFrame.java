@@ -213,6 +213,15 @@ public class WikiMainFrame extends JFrame {
         panelHerramientas.add(btnBuscar);
         panelHerramientas.add(btnRefrescar);
 
+        if (rolUsuario.equals("administrador")) {
+            JButton btnNuevoArticulo = crearBotonAccion("Nuevo Artículo", new Color(0, 123, 255));
+            btnNuevoArticulo.addActionListener(e -> {
+                NuevoArticuloFrame nuevoArticulo = new NuevoArticuloFrame(tokenUsuarioActual);
+                nuevoArticulo.setVisible(true);
+            });
+            panelHerramientas.add(btnNuevoArticulo);
+        }
+
         gridTarjetas = new JPanel(new GridLayout(0, 3, 25, 25));
         gridTarjetas.setBackground(fondoPrincipal);
 

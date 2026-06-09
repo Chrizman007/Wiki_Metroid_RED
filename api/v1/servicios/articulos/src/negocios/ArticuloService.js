@@ -17,7 +17,7 @@ const protoLoader = require('@grpc/proto-loader');
 
 const config = {
   port: process.env.PORT || 3001,
-  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/metroid_wiki_articulos'
+  mongoUri: process.env.MONGO_URI
 };
 
 const router = express.Router();
@@ -62,7 +62,7 @@ const verificarPermisos = (rolesPermitidos) => {
          return res.status(401).json({ message: "El token proporcionado está vacío o mal formado." });
       }
 
-      const decoded = jwt.verify(tokenLimpio, process.env.JWT_SECRET || 'firma_super_secreta_metroid');
+      const decoded = jwt.verify(tokenLimpio, process.env.JWT_SECRET);
       req.user = decoded; 
 
       if (rolesPermitidos && !rolesPermitidos.includes(decoded.rol)) {

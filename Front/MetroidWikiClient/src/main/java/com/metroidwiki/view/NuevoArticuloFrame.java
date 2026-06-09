@@ -17,6 +17,7 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import java.awt.*;
 import java.io.File;
+import javax.swing.SwingUtilities;
 
 public class NuevoArticuloFrame extends JFrame {
 
@@ -279,7 +280,20 @@ public class NuevoArticuloFrame extends JFrame {
                         if (archivoImagenSeleccionado != null && archivoImagenSeleccionado.exists()) {
                             try {
                                 GrpcMediaClient grpcClient = new GrpcMediaClient();
-                                grpcClient.subirImagenArticulo(idArticuloCreado, archivoImagenSeleccionado);
+                                grpcClient.subirImagenArticulo(idArticuloCreado, archivoImagenSeleccionado, new GrpcMediaClient.UploadListener() {
+                                    @Override
+                                    public void onSuccess(String urlImagen) {
+                                        System.out.println("gRPC upload completed: " + urlImagen);
+                                    }
+
+                                    @Override
+                                    public void onError(Throwable t) {
+                                        System.err.println("Fallo al conectar con gRPC: " + t.getMessage());
+                                        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(NuevoArticuloFrame.this,
+                                                "No se pudo subir la imagen: " + t.getMessage(),
+                                                "Error de Imagen", JOptionPane.ERROR_MESSAGE));
+                                    }
+                                });
                                 System.out.println("Enviando foto a la velocidad de la luz...");
                             } catch (Exception ex) {
                                 System.err.println("Fallo al conectar con gRPC: " + ex.getMessage());

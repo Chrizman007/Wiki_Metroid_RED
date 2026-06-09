@@ -14,8 +14,8 @@ const config = {
   // Prioriza el puerto 3002 configurado en tu .env
   port: process.env.PORT || process.env.PORT_AUTH || 3002, 
   // Lee la URL de la nube de MongoDB Atlas de tu .env
-  mongoUri: process.env.MONGO_URI || 'mongodb://localhost:27017/metroid_wiki_usuarios',
-  jwtSecret: process.env.JWT_SECRET || 'firma_super_secreta_metroid'
+  mongoUri: process.env.MONGO_URI,
+  jwtSecret: process.env.JWT_SECRET
 };
 
 const router = express.Router();
