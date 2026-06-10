@@ -14,8 +14,8 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 });
 const mediaProto = grpc.loadPackageDefinition(packageDefinition).metroid_media;
 
-// 2. Ruta donde guardaremos las imágenes
-const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'imagenes');
+// 2. Ruta donde guardaremos los archivos multimedia
+const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'media');
 
 // 3. Lógica Estricta de Subida de Archivos
 const subirImagen = (call, callback) => {

@@ -587,7 +587,12 @@ public class DetalleArticuloFrame extends JFrame {
         }
 
         String nombreCodificado = nombreImagen.replace(" ", "%20");
-        String urlCompleta = RetrofitClient.BASE_URL + "articulos/public/imagenes/" + nombreCodificado;
+        String urlCompleta;
+        if (nombreImagen.startsWith("http://") || nombreImagen.startsWith("https://")) {
+            urlCompleta = nombreCodificado;
+        } else {
+            urlCompleta = RetrofitClient.BASE_URL + "articulos/public/imagenes/" + nombreCodificado;
+        }
 
         SwingWorker<ImageIcon, Void> worker = new SwingWorker<>() {
             @Override

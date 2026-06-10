@@ -25,7 +25,7 @@ public class GrpcMediaClient {
     private final MediaServiceGrpc.MediaServiceStub stubAsincrono;
 
     public GrpcMediaClient() {
-        channel = ManagedChannelBuilder.forAddress("localhost", 50051)
+        channel = ManagedChannelBuilder.forAddress("localhost", 3003)
                 .usePlaintext() // Red local
                 .build();
         stubAsincrono = MediaServiceGrpc.newStub(channel);

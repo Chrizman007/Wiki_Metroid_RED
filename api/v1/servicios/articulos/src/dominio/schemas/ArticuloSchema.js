@@ -22,6 +22,10 @@ const articuloSchema = new mongoose.Schema({
         enum: ['Lore', 'Items', 'Enemigos', 'ubicaciones', 'personajes'],
         required: [true, 'La categoría es obligatoria']
     },
+    imagen: {
+        type: String,
+        default: ''
+    },
     estado: {
         type: String,
         enum: ['EnBorrador', 'EnRevision', 'Publicado', 'Archivado'], 

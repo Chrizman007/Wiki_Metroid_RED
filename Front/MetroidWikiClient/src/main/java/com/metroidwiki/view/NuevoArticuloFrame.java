@@ -110,7 +110,7 @@ public class NuevoArticuloFrame extends JFrame {
         });
 
         // Multimedia
-        JLabel lblMultimedia = new JLabel("Imagen Ilustrativa:");
+        JLabel lblMultimedia = new JLabel("Archivo Multimedia:");
         lblMultimedia.setForeground(textoClaro);
         lblMultimedia.setFont(fuenteLabel);
         lblMultimedia.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -120,7 +120,7 @@ public class NuevoArticuloFrame extends JFrame {
         panelImagenSelector.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         panelImagenSelector.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        txtRutaImagen = new JTextField("No se ha seleccionado ninguna imagen...");
+        txtRutaImagen = new JTextField("No se ha seleccionado ningún archivo multimedia...");
         txtRutaImagen.setEditable(false);
         estilizarInput(txtRutaImagen);
         txtRutaImagen.setForeground(textoGris);
@@ -229,10 +229,11 @@ public class NuevoArticuloFrame extends JFrame {
 
     private void abrirSelectorImagen() {
         JFileChooser selector = new JFileChooser();
-        selector.setDialogTitle("Seleccionar Imagen de la Wiki");
+        selector.setDialogTitle("Seleccionar archivo multimedia de la Wiki");
 
-        FileNameExtensionFilter filtro = new FileNameExtensionFilter("Imágenes (JPG, PNG)", "jpg", "jpeg", "png");
+        FileNameExtensionFilter filtro = new FileNameExtensionFilter("Multimedia (JPG, PNG, MP4, MP3, WAV)", "jpg", "jpeg", "png", "gif", "mp4", "mov", "avi", "mp3", "wav", "ogg", "flac");
         selector.setFileFilter(filtro);
+        selector.setAcceptAllFileFilterUsed(true);
 
         int resultado = selector.showOpenDialog(this);
         if (resultado == JFileChooser.APPROVE_OPTION) {
@@ -256,11 +257,11 @@ public class NuevoArticuloFrame extends JFrame {
         btnGuardar.setEnabled(false);
         btnGuardar.setText("GUARDANDO...");
 
-        String nombreImagenFinal = (archivoImagenSeleccionado != null) ? archivoImagenSeleccionado.getName() : "default.png";
+        String nombreArchivoMultimedia = (archivoImagenSeleccionado != null) ? archivoImagenSeleccionado.getName() : null;
 
         try {
             ArticuloClient client = RetrofitClient.getClient().create(ArticuloClient.class);
-            ArticuloRequest request = new ArticuloRequest(titulo, categoria, descripcion, contenido, nombreImagenFinal);
+            ArticuloRequest request = new ArticuloRequest(titulo, categoria, descripcion, contenido, nombreArchivoMultimedia);
 
             String bearerToken = "Bearer " + tokenJwt;
 
@@ -270,7 +271,7 @@ public class NuevoArticuloFrame extends JFrame {
                     btnGuardar.setEnabled(true);
                     btnGuardar.setText("GUARDAR ARTÍCULO");
 
-                    if (response.isSuccessful() && response.body() != null) {
+                    if (response.isSuccessful() && response.body() != null && response.body().getArticulo() != null && response.body().getArticulo().getId() != null) {
 
                         // 🛠️ 1. OBTENEMOS EL ID DEL ARTÍCULO CREADO (Asegúrate de que tu ArticuloResponse tenga getArticulo().getId())
                         // Si tu modelo es distinto, ajústalo aquí para extraer el ID que devuelve Node.js
@@ -284,31 +285,43 @@ public class NuevoArticuloFrame extends JFrame {
                                     @Override
                                     public void onSuccess(String urlImagen) {
                                         System.out.println("gRPC upload completed: " + urlImagen);
+                                        SwingUtilities.invokeLater(() -> {
+                                            JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "¡Artículo guardado con imagen en la red!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                                            dispose();
+                                        });
                                     }
 
                                     @Override
                                     public void onError(Throwable t) {
                                         System.err.println("Fallo al conectar con gRPC: " + t.getMessage());
-                                        SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(NuevoArticuloFrame.this,
-                                                "No se pudo subir la imagen: " + t.getMessage(),
-                                                "Error de Imagen", JOptionPane.ERROR_MESSAGE));
+                                        SwingUtilities.invokeLater(() -> {
+                                            JOptionPane.showMessageDialog(NuevoArticuloFrame.this,
+                                                    "Artículo guardado, pero no se pudo subir la imagen: " + t.getMessage(),
+                                                    "Advertencia", JOptionPane.WARNING_MESSAGE);
+                                            dispose();
+                                        });
                                     }
                                 });
                                 System.out.println("Enviando foto a la velocidad de la luz...");
                             } catch (Exception ex) {
                                 System.err.println("Fallo al conectar con gRPC: " + ex.getMessage());
+                                JOptionPane.showMessageDialog(NuevoArticuloFrame.this,
+                                        "Artículo guardado, pero error al conectar gRPC: " + ex.getMessage(),
+                                        "Advertencia", JOptionPane.WARNING_MESSAGE);
+                                dispose();
                             }
+                        } else {
+                            // Sin imagen, cerramos directamente
+                            JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "¡Artículo guardado en la red con éxito!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                            dispose();
                         }
-
-                        JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "¡Artículo guardado en la red con éxito!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                        dispose();
 
                     } else {
-                        if (response.code() == 403) {
-                            JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "Acceso Denegado: Tu rol no permite escribir artículos.", "Error de Seguridad", JOptionPane.ERROR_MESSAGE);
-                        } else {
-                            JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "Error del Servidor: " + response.code(), "Error", JOptionPane.ERROR_MESSAGE);
+                        String mensajeError = "Error del Servidor: " + response.code();
+                        if (response.body() != null && response.body().getMessage() != null) {
+                            mensajeError += " - " + response.body().getMessage();
                         }
+                        JOptionPane.showMessageDialog(NuevoArticuloFrame.this, mensajeError, "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
 

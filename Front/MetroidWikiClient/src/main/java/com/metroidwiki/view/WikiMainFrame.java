@@ -408,9 +408,13 @@ public class WikiMainFrame extends JFrame {
             return;
         }
 
-        // 🛠️ PARCHE: Reemplazamos los espacios físicos por "%20" para que Java no crashee
         String nombreCodificado = nombreImagen.replace(" ", "%20");
-        String urlCompleta = RetrofitClient.BASE_URL + "articulos/public/imagenes/" + nombreCodificado;
+        String urlCompleta;
+        if (nombreImagen.startsWith("http://") || nombreImagen.startsWith("https://")) {
+            urlCompleta = nombreCodificado;
+        } else {
+            urlCompleta = RetrofitClient.BASE_URL + "articulos/public/imagenes/" + nombreCodificado;
+        }
 
         SwingWorker<ImageIcon, Void> worker = new SwingWorker<>() {
             @Override

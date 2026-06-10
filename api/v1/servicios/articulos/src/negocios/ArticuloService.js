@@ -375,7 +375,7 @@ const subirImagenHandler = (call, callback) => {
   let articuloId = '';
   let chunks = [];
 
-  // Cuando Java empieza a mandar los pedacitos de la imagen
+  // Cuando Java empieza a mandar los pedacitos del archivo
   call.on('data', (request) => {
     articuloId = request.articuloId;
     archivoNombre = request.nombreArchivo;
@@ -383,34 +383,44 @@ const subirImagenHandler = (call, callback) => {
   });
 
   // Cuando Java nos avisa que ya mandó el último pedazo
-  call.on('end', () => {
+  call.on('end', async () => {
     try {
       // Unimos todos los pedazos en un archivo físico
-      const imagenCompleta = Buffer.concat(chunks);
+      const archivoCompleto = Buffer.concat(chunks);
       
-      // Construimos la ruta absoluta hacia tu carpeta public/imagenes (../../)
+    // 🛠️ Construimos la ruta absoluta hacia tu carpeta public/imagenes (../../)
       const directorioPublico = path.join(__dirname, '../../public/imagenes');
       
       // BONUS: Si por error borraste la carpeta, Node.js la crea sola
-      if (!fs.existsSync(directorioPublico)){
+      if (!fs.existsSync(directorioPublico)) {
           fs.mkdirSync(directorioPublico, { recursive: true });
       }
 
-      // Guardamos la foto en el disco duro
+      // Guardamos el archivo en el disco duro
       const rutaDestino = path.join(directorioPublico, archivoNombre);
-      fs.writeFileSync(rutaDestino, imagenCompleta);
+      fs.writeFileSync(rutaDestino, archivoCompleto);
       
-      console.log(`📸 [gRPC] Imagen guardada con éxito: ${archivoNombre}`);
+      console.log(`📦 [gRPC] Archivo guardado con éxito: ${archivoNombre}`);
+
+      const rutaPublica = `http://localhost:${config.port}/articulos/public/imagenes/${archivoNombre}`;
+
+      // Actualizamos el artículo con la URL del archivo subido
+      try {
+        await Articulo.findByIdAndUpdate(articuloId, { imagen: rutaPublica });
+        console.log(`✅ [gRPC] Registro del artículo actualizado con imagen URL: ${rutaPublica}`);
+      } catch (updateError) {
+        console.warn(`⚠️ No se pudo actualizar el artículo ${articuloId} con la URL del archivo:`, updateError.message);
+      }
 
       // Respondemos a Java según el contrato media.proto
       callback(null, {
         exito: true,
-        mensaje: "Imagen recibida y guardada por el servidor de la Federación.",
-        urlImagen: `http://localhost:${config.port}/articulos/public/imagenes/${archivoNombre}`
+        mensaje: "Archivo recibido y guardado correctamente.",
+        urlImagen: rutaPublica
       });
 
     } catch (error) {
-      console.error("❌ Fallo en gRPC al guardar la imagen:", error);
+      console.error("❌ Fallo en gRPC al guardar el archivo:", error);
       callback({
         code: grpc.status.INTERNAL,
         message: `Error interno al guardar: ${error.message}`
@@ -435,8 +445,11 @@ async function startServer() {
     app.use(cors());
     
     // 🛠️ MAGIA: Hacemos que la carpeta física sea accesible desde una URL en el navegador
-    const directorioPublico = path.join(__dirname, '../../public/imagenes');
-    app.use('/articulos/public/imagenes', express.static(directorioPublico));
+    const directorioImagenes = path.join(__dirname, '../../public/imagenes');
+    if (!fs.existsSync(directorioImagenes)) {
+      fs.mkdirSync(directorioImagenes, { recursive: true });
+    }
+    app.use('/articulos/public/imagenes', express.static(directorioImagenes));
 
     app.use('/articulos', router);
     
@@ -449,11 +462,12 @@ async function startServer() {
     const grpcServer = new grpc.Server();
     grpcServer.addService(mediaProto.MediaService.service, { SubirImagen: subirImagenHandler });
     
-    grpcServer.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), (err, port) => {
+    grpcServer.bindAsync('0.0.0.0:3003', grpc.ServerCredentials.createInsecure(), (err, port) => {
       if (err) {
         console.error('❌ No se pudo arrancar el servidor gRPC:', err);
         return;
       }
+      grpcServer.start();
       console.log(`📸 Servidor gRPC (Multimedia) corriendo en el puerto: ${port}`);
     });
 
