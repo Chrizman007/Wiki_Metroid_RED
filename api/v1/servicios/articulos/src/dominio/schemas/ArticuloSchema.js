@@ -19,7 +19,7 @@ const articuloSchema = new mongoose.Schema({
     },
     categoria: {
         type: String,
-        enum: ['Lore', 'Items', 'Enemigos', 'ubicaciones', 'personajes'],
+        enum: ['Lore', 'Items', 'Enemigos', 'Ubicaciones', 'Personajes'],
         required: [true, 'La categoría es obligatoria']
     },
     imagen: {

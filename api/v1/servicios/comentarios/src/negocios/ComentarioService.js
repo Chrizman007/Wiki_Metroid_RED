@@ -183,7 +183,7 @@ router.get('/:articuloId', async (req, res) => {
  *   post:
  *     summary: Agrega un comentario a un artículo (Requiere token)
  */
-router.post('/:articuloId', verificarPermisos(), async (req, res) => {
+router.post('/:articuloId', verificarPermisos(['administrador', 'lector']), async (req, res) => {
   try {
     const { articuloId } = req.params;
     const autorId = req.user.id;

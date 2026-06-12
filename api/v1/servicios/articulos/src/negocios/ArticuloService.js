@@ -116,7 +116,7 @@ const articleSchema = new mongoose.Schema({
   contenido: { type: String, required: true },
   categoria: { 
     type: String, 
-    enum: ['Lore', 'Items', 'Enemigos', 'ubicaciones', 'personajes'], 
+    enum: ['Lore', 'Items', 'Enemigos', 'Ubicaciones', 'Personajes'], 
     required: true 
   },
   estado: { 
@@ -353,7 +353,7 @@ router.get('/:id', async (req, res) => {
  *       403:
  *         description: Token no proporcionado o permisos insuficientes.
  */
-router.post('/', verificarPermisos(['administrador', 'desarrollador']), async (req, res) => {
+router.post('/', verificarPermisos(['administrador']), async (req, res) => {
   try {
     req.body.autorId = req.user.id; 
 
