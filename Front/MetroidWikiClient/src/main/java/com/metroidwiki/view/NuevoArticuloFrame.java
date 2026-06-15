@@ -79,7 +79,7 @@ public class NuevoArticuloFrame extends JFrame {
         lblCategoria.setFont(fuenteLabel);
         lblCategoria.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        String[] categorias = {"Lore", "Items", "Enemigos", "ubicaciones", "personajes"};
+        String[] categorias = {"Lore", "Items", "Enemigos", "Ubicaciones", "Personajes"};
         cmbCategoria = new JComboBox<>(categorias);
         cmbCategoria.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         cmbCategoria.setBackground(panelSecundario);

@@ -236,11 +236,16 @@ router.post('/login', async (req, res) => {
   try {
     const authData = await AuthLogicService.iniciarSesion(req.body.correo, req.body.password);
     
-    // Armamos el JSON exactamente para Java
+    // Enviamos el token estrictamente en el header de Authorization (Bearer Token)
+    res.setHeader(
+      'Authorization',
+      `Bearer ${authData.token}`
+    );
+
+    // Armamos el JSON de respuesta
     res.status(200).json({
       message: 'Login exitoso',
-      token: authData.token,
-      nombre: authData.usuario.nombre, 
+      nombre: authData.usuario.nombre,
       rol: authData.usuario.rol
     });
     

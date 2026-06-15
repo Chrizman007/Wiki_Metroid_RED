@@ -189,12 +189,23 @@ public class LoginFrame extends JFrame {
                 public void onResponse(Call<AuthResponse> call, Response<AuthResponse> response) {
                     restaurarBoton();
                     if (response.isSuccessful() && response.body() != null) {
-                        String token = response.body().getToken();
+                        String authHeader = response.headers().get("Authorization");
+
+                        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                            JOptionPane.showMessageDialog(
+                                LoginFrame.this,
+                                "No se recibió un token JWT válido.",
+                                "Error de autenticación",
+                                JOptionPane.ERROR_MESSAGE
+                            );
+                            return;
+                        }
+
+                        String token = authHeader.substring(7);
                         String nombreCazador = response.body().getNombre();
                         String rolCazador = response.body().getRol();
                         System.out.println("⚠️ DEBUG ROL DESDE NODE: " + rolCazador);
 
-                        JOptionPane.showMessageDialog(LoginFrame.this, "¡Bienvenido a la Wiki!\nTu acceso ha sido verificado.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                         System.out.println("TOKEN JWT RECIBIDO: " + token);
                         System.out.println("CAZADOR CONECTADO: " + nombreCazador);
                         System.out.println("NIVEL DE ACCESO: " + rolCazador);
