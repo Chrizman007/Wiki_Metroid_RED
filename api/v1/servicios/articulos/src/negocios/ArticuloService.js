@@ -25,13 +25,9 @@ const router = express.Router();
 // ==========================================
 // VIEWS COOLDOWN (Per-article per-user)
 // ==========================================
-// 30 seconds cooldown (milliseconds)
 const VIEW_COOLDOWN_MS = 30 * 1000;
-
-// Structure: Map<articleId, Map<userKey, lastTimestampMillis>>
 const viewCooldownStore = new Map();
 
-// Helper that derives a user key from the request. Prefer JWT id, fallback to IP.
 function deriveUserKey(req) {
   try {
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];
@@ -45,18 +41,14 @@ function deriveUserKey(req) {
       }
     }
   } catch (e) {
-    // ignore token errors and fallback to IP
   }
-
-  // Fallback to IP address (may be same for multiple users behind NAT)
   const ip = req.ip || req.connection && req.connection.remoteAddress || 'anonymous';
   return `ip:${ip}`;
 }
 
-// Prune old entries periodically to avoid memory bloat
 setInterval(() => {
   const now = Date.now();
-  const maxAge = 60 * 60 * 1000; // 1 hour
+  const maxAge = 60 * 60 * 1000; 
   for (const [articleId, userMap] of viewCooldownStore.entries()) {
     for (const [userKey, ts] of userMap.entries()) {
       if (now - ts > maxAge) userMap.delete(userKey);
@@ -66,9 +58,8 @@ setInterval(() => {
 }, 60 * 1000);
 
 // ==========================================
-// CONFIGURACIÓN DE gRPC (Carga del Contrato)
+// CONFIGURACIÓN DE gRPC
 // ==========================================
-// Subimos dos niveles (../../) para llegar de src/negocio a la raíz y entrar a proto/
 const PROTO_PATH = path.join(__dirname, '../../proto/media.proto');
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
@@ -79,11 +70,10 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   oneofs: true
 });
 
-// Cargamos el paquete "media" que definimos en el archivo .proto
 const mediaProto = grpc.loadPackageDefinition(packageDefinition).media;
 
 // ==========================================
-// MIDDLEWARE DE SEGURIDAD (El Guardia Blindado)
+// MIDDLEWARE DE SEGURIDAD
 // ==========================================
 const verificarPermisos = (rolesPermitidos) => {
   return (req, res, next) => {
@@ -120,7 +110,7 @@ const verificarPermisos = (rolesPermitidos) => {
 };
 
 // ==========================================
-// CONFIGURACION DE SWAGGER (CERRADURA OFICIAL)
+// CONFIGURACION DE SWAGGER
 // ==========================================
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
@@ -169,7 +159,8 @@ const articleSchema = new mongoose.Schema({
   },
   vistas: { type: Number, default: 0 },
   imagen: { type: String }, 
-  autorId: { type: mongoose.Schema.Types.ObjectId, required: true }
+  autorId: { type: mongoose.Schema.Types.ObjectId, required: true },
+  autor: { type: String, required: true, default: 'Desconocido' } 
 }, {
   timestamps: true 
 });
@@ -222,6 +213,7 @@ class ArticuloDTO {
     this.vistas = modeloMongoose.vistas;
     this.imagen = modeloMongoose.imagen || '';
     this.autorId = modeloMongoose.autorId;
+    this.autor = modeloMongoose.autor || 'Desconocido'; 
     this.fechaCreacion = modeloMongoose.createdAt;
     this.fechaActualizacion = modeloMongoose.updatedAt;
   }
@@ -257,10 +249,21 @@ const ArticuloRepository = {
       }
       throw new ErrorBaseDeDatosException(error.message);
     }
+  },
+
+  // 🛠️ NUEVO: Método para actualizar en la base de datos
+  actualizar: async (id, datosActualizados) => {
+    try {
+      return await Articulo.findByIdAndUpdate(id, datosActualizados, { new: true, runValidators: true });
+    } catch (error) {
+      if (error.code === 11000) {
+          throw new ErrorBaseDeDatosException("Ya existe un artículo con ese título.");
+      }
+      throw new ErrorBaseDeDatosException(error.message);
+    }
   }
 };
 
-// Incrementar vistas en la base de datos
 ArticuloRepository.incrementarVistas = async (id) => {
   try {
     return await Articulo.findByIdAndUpdate(id, { $inc: { vistas: 1 } }, { new: true });
@@ -282,69 +285,57 @@ const ArticuloLogicService = {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new FormatoIdInvalidoException();
     }
-    
     const articulo = await ArticuloRepository.obtenerPorId(id);
-    
     if (!articulo) {
       throw new DocumentoNoEncontradoException(id);
     }
-    
     return new ArticuloDTO(articulo);
   },
 
   crearArticulo: async (datos) => {
-    const requiredFields = ['titulo', 'categoria', 'descripcion', 'contenido', 'autorId'];
+    const requiredFields = ['titulo', 'categoria', 'descripcion', 'contenido', 'autorId', 'autor'];
     const missingFields = requiredFields.filter(field => !datos[field]);
     
     if (missingFields.length > 0) {
       throw new CamposRequeridosFaltantesException(missingFields);
     }
+
+    // 🛠️ BLINDAJE: Forzamos la primera letra mayúscula para evitar el Error 500
+    if (datos.categoria) {
+      datos.categoria = datos.categoria.charAt(0).toUpperCase() + datos.categoria.slice(1).toLowerCase();
+    }
     
     const articuloGuardado = await ArticuloRepository.crear(datos);
     return new ArticuloDTO(articuloGuardado);
+  },
+
+  // 🛠️ NUEVO: Método de negocio para actualizar
+  actualizarArticulo: async (id, datos) => {
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+      throw new FormatoIdInvalidoException();
+    }
+
+    const articuloExistente = await ArticuloRepository.obtenerPorId(id);
+    if (!articuloExistente) {
+      throw new DocumentoNoEncontradoException(id);
+    }
+
+    // 🛠️ BLINDAJE: Normalizamos también al editar
+    if (datos.categoria) {
+      datos.categoria = datos.categoria.charAt(0).toUpperCase() + datos.categoria.slice(1).toLowerCase();
+    }
+
+    const articuloActualizado = await ArticuloRepository.actualizar(id, datos);
+    return new ArticuloDTO(articuloActualizado);
   }
 };
-
-// ==========================================
-// Manejo de vistas con cooldown
-// ==========================================
-async function handleArticleView(req, articleId) {
-  const userKey = deriveUserKey(req);
-  const now = Date.now();
-
-  let userMap = viewCooldownStore.get(articleId);
-  if (!userMap) {
-    userMap = new Map();
-    viewCooldownStore.set(articleId, userMap);
-  }
-
-  const lastTs = userMap.get(userKey);
-
-  if (!lastTs) {
-    // First time -> count view
-    await ArticuloRepository.incrementarVistas(articleId);
-    userMap.set(userKey, now);
-    return true;
-  }
-
-  const elapsed = now - lastTs;
-  if (elapsed >= VIEW_COOLDOWN_MS) {
-    // cooldown passed -> count view and reset
-    await ArticuloRepository.incrementarVistas(articleId);
-    userMap.set(userKey, now);
-    return true;
-  }
-
-  // within cooldown: reset timer (extend cooldown) but don't increment
-  userMap.set(userKey, now);
-  return false;
-}
 
 // ==========================================
 // 5. CAPA DE PRESENTACION (Controladores HTTP)
 // ==========================================
 function manejarExcepcionHTTP(error, res) {
   if (error instanceof MetroidException) {
+    console.error(`🚨 ERROR RECHAZADO POR MONGO: ${error.message}`); 
     return res.status(error.statusCode).json({
       error: error.name,
       message: error.message
@@ -400,7 +391,6 @@ router.get('/:id', async (req, res) => {
   try {
     const articuloDTO = await ArticuloLogicService.obtenerArticuloPorId(req.params.id);
 
-    // Handle view counting with cooldown. If incremented, reflect new count in response.
     try {
       const incremented = await handleArticleView(req, req.params.id);
       if (incremented) {
@@ -453,7 +443,8 @@ router.get('/:id', async (req, res) => {
  */
 router.post('/', verificarPermisos(['administrador']), async (req, res) => {
   try {
-    req.body.autorId = req.user.id; 
+    req.body.autorId = req.user.id || req.user._id || req.user.sub; 
+    req.body.autor = req.user.nombre || req.user.name || 'Administrador';
 
     const articuloDTO = await ArticuloLogicService.crearArticulo(req.body);
     res.status(201).json({
@@ -465,36 +456,83 @@ router.post('/', verificarPermisos(['administrador']), async (req, res) => {
   }
 });
 
+// 🛠️ NUEVO: RUTA PARA ACTUALIZAR (PUT)
+/**
+ * @swagger
+ * /articulos/{id}:
+ *   put:
+ *     summary: Actualiza un articulo existente (Protegido - Requiere Token)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID unico del articulo a modificar
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               titulo:
+ *                 type: string
+ *               categoria:
+ *                 type: string
+ *               estado:
+ *                 type: string
+ *                 example: "Publicado"
+ *               descripcion:
+ *                 type: string
+ *               contenido:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Articulo actualizado exitosamente.
+ *       403:
+ *         description: Token no proporcionado o permisos insuficientes.
+ *       404:
+ *         description: Articulo no encontrado.
+ */
+router.put('/:id', verificarPermisos(['administrador']), async (req, res) => {
+  try {
+    const articuloDTO = await ArticuloLogicService.actualizarArticulo(req.params.id, req.body);
+    res.status(200).json({
+      message: 'Articulo actualizado exitosamente',
+      articulo: articuloDTO
+    });
+  } catch (error) {
+    manejarExcepcionHTTP(error, res);
+  }
+});
+
+
 // ==========================================
-// 6. SERVIDOR gRPC (Lógica de Recepción de Imágenes)
+// 6. SERVIDOR gRPC
 // ==========================================
 const subirImagenHandler = (call, callback) => {
   let archivoNombre = '';
   let articuloId = '';
   let chunks = [];
 
-  // Cuando Java empieza a mandar los pedacitos del archivo
   call.on('data', (request) => {
     articuloId = request.articuloId;
     archivoNombre = request.nombreArchivo;
-    chunks.push(request.chunk); // Guardamos el pedazo de bytes
+    chunks.push(request.chunk); 
   });
 
-  // Cuando Java nos avisa que ya mandó el último pedazo
   call.on('end', async () => {
     try {
-      // Unimos todos los pedazos en un archivo físico
       const archivoCompleto = Buffer.concat(chunks);
-      
-    // 🛠️ Construimos la ruta absoluta hacia tu carpeta public/imagenes (../../)
       const directorioPublico = path.join(__dirname, '../../public/imagenes');
       
-      // BONUS: Si por error borraste la carpeta, Node.js la crea sola
       if (!fs.existsSync(directorioPublico)) {
           fs.mkdirSync(directorioPublico, { recursive: true });
       }
 
-      // Guardamos el archivo en el disco duro
       const rutaDestino = path.join(directorioPublico, archivoNombre);
       fs.writeFileSync(rutaDestino, archivoCompleto);
       
@@ -502,15 +540,13 @@ const subirImagenHandler = (call, callback) => {
 
       const rutaPublica = `http://localhost:${config.port}/articulos/public/imagenes/${archivoNombre}`;
 
-      // Actualizamos el artículo con la URL del archivo subido
       try {
         await Articulo.findByIdAndUpdate(articuloId, { imagen: rutaPublica });
-        console.log(`✅ [gRPC] Registro del artículo actualizado con imagen URL: ${rutaPublica}`);
+        console.log(`✅ [gRPC] Registro actualizado con imagen URL: ${rutaPublica}`);
       } catch (updateError) {
-        console.warn(`⚠️ No se pudo actualizar el artículo ${articuloId} con la URL del archivo:`, updateError.message);
+        console.warn(`⚠️ No se pudo actualizar el artículo:`, updateError.message);
       }
 
-      // Respondemos a Java según el contrato media.proto
       callback(null, {
         exito: true,
         mensaje: "Archivo recibido y guardado correctamente.",
@@ -518,7 +554,7 @@ const subirImagenHandler = (call, callback) => {
       });
 
     } catch (error) {
-      console.error("❌ Fallo en gRPC al guardar el archivo:", error);
+      console.error("❌ Fallo en gRPC:", error);
       callback({
         code: grpc.status.INTERNAL,
         message: `Error interno al guardar: ${error.message}`
@@ -526,7 +562,6 @@ const subirImagenHandler = (call, callback) => {
     }
   });
 };
-
 
 // ==========================================
 // 7. INICIO DE TODOS LOS SERVIDORES
@@ -542,7 +577,6 @@ async function startServer() {
     app.use(express.json());
     app.use(cors());
     
-    // 🛠️ MAGIA: Hacemos que la carpeta física sea accesible desde una URL en el navegador
     const directorioImagenes = path.join(__dirname, '../../public/imagenes');
     if (!fs.existsSync(directorioImagenes)) {
       fs.mkdirSync(directorioImagenes, { recursive: true });
@@ -556,7 +590,6 @@ async function startServer() {
       console.log(`📚 Swagger docs available at: http://localhost:${config.port}/articulos/api-docs`);
     });
 
-    // 🚀 ENCENDIDO DEL SERVIDOR gRPC
     const grpcServer = new grpc.Server();
     grpcServer.addService(mediaProto.MediaService.service, { SubirImagen: subirImagenHandler });
     

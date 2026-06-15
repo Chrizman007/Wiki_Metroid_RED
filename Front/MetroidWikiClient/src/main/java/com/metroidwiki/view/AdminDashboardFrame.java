@@ -13,6 +13,8 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.metroidwiki.network.ArticuloClient;
+import com.metroidwiki.network.RetrofitClient;
 
 public class AdminDashboardFrame extends JFrame {
 
@@ -114,15 +116,22 @@ public class AdminDashboardFrame extends JFrame {
     }
 
     private JPanel crearBarraBusqueda() {
-        JPanel panelBusqueda = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
+        // 🛠️ CAMBIO ESTRUCTURAL: Usamos un BoxLayout Horizontal estricto
+        JPanel panelBusqueda = new JPanel();
+        panelBusqueda.setLayout(new BoxLayout(panelBusqueda, BoxLayout.X_AXIS));
         panelBusqueda.setBackground(fondoPrincipal);
         panelBusqueda.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JLabel lblIcono = new JLabel("Buscar:"); // 🛠️ Adiós emojis problemáticos
+        // 🛠️ Blindamos el alto del contenedor para que no se deforme
+        panelBusqueda.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
+
+        JLabel lblIcono = new JLabel("Buscar: ");
         lblIcono.setFont(new Font("Segoe UI", Font.BOLD, 14));
         lblIcono.setForeground(textoClaro);
 
         txtBuscador = new JTextField();
+        // Para este Layout estricto, es vital definir el tamaño máximo
+        txtBuscador.setMaximumSize(new Dimension(400, 35));
         txtBuscador.setPreferredSize(new Dimension(300, 35));
         txtBuscador.setBackground(panelSecundario);
         txtBuscador.setForeground(Color.WHITE);
@@ -138,11 +147,27 @@ public class AdminDashboardFrame extends JFrame {
         btnBuscar.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnBuscar.setFocusPainted(false);
         btnBuscar.setBorderPainted(false);
+        btnBuscar.setMaximumSize(new Dimension(100, 35)); // 🛠️ Tamaño estricto
+        btnBuscar.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnBuscar.addActionListener(e -> ejecutarBusqueda());
 
+        JButton btnRefrescar = new JButton("Actualizar Tabla");
+        btnRefrescar.setBackground(new Color(33, 150, 243));
+        btnRefrescar.setForeground(Color.WHITE);
+        btnRefrescar.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnRefrescar.setFocusPainted(false);
+        btnRefrescar.setBorderPainted(false);
+        btnRefrescar.setMaximumSize(new Dimension(150, 35)); // 🛠️ Tamaño estricto
+        btnRefrescar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnRefrescar.addActionListener(e -> refrescarTablaServidor());
+
+        // 🛠️ ENSAMBLAJE ESTRICTO (Componente -> Espacio -> Componente)
         panelBusqueda.add(lblIcono);
         panelBusqueda.add(txtBuscador);
+        panelBusqueda.add(Box.createRigidArea(new Dimension(10, 0))); // 10px de separación
         panelBusqueda.add(btnBuscar);
+        panelBusqueda.add(Box.createRigidArea(new Dimension(15, 0))); // 15px de separación
+        panelBusqueda.add(btnRefrescar);
 
         return panelBusqueda;
     }
@@ -152,7 +177,6 @@ public class AdminDashboardFrame extends JFrame {
         panelTablaContenedor.setBackground(panelSecundario);
         panelTablaContenedor.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 65), 1));
 
-        // 🛠️ 2 COLUMNAS SEPARADAS PARA LOS BOTONES
         String[] columnas = {"ID", "Título", "Categoría", "Autor", "Estado", "Editar", "Borrar"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
@@ -166,20 +190,36 @@ public class AdminDashboardFrame extends JFrame {
         tablaArticulos.setRowHeight(40);
         tablaArticulos.setShowGrid(false);
 
+        // 🛠️ RENDERER PERSONALIZADO PARA ENCABEZADOS (Forza el fondo oscuro)
         JTableHeader header = tablaArticulos.getTableHeader();
-        header.setBackground(fondoFicha);
-        header.setForeground(Color.WHITE);
-        header.setFont(new Font("Segoe UI", Font.BOLD, 13));
         header.setPreferredSize(new Dimension(0, 35));
 
-        // 🛠️ RENDERER BLINDADO CONTRA EL FONDO BLANCO
+        DefaultTableCellRenderer headerRenderer = new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                c.setBackground(fondoFicha); // Forzamos el color oscuro
+                c.setForeground(Color.WHITE); // Texto blanco brillante
+                c.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                ((JLabel) c).setHorizontalAlignment(SwingConstants.CENTER);
+                // Le ponemos un pequeño borde sutil para separar columnas
+                ((JLabel) c).setBorder(BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(50, 50, 55)));
+                return c;
+            }
+        };
+
+        // Aplicamos el nuevo renderizador a todas las columnas del encabezado
+        for (int i = 0; i < tablaArticulos.getColumnModel().getColumnCount(); i++) {
+            tablaArticulos.getColumnModel().getColumn(i).setHeaderRenderer(headerRenderer);
+        }
+
+        // 🛠️ RENDERER PARA LAS CELDAS NORMALES (Mantiene tu diseño actual)
         DefaultTableCellRenderer renderCelda = new DefaultTableCellRenderer() {
             @Override
             public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 setBorder(noFocusBorder);
 
-                // Forzamos el color de fondo para que NUNCA sea blanco
                 if (isSelected) {
                     c.setBackground(new Color(55, 55, 60));
                 } else {
@@ -202,13 +242,11 @@ public class AdminDashboardFrame extends JFrame {
             tablaArticulos.getColumnModel().getColumn(i).setCellRenderer(renderCelda);
         }
 
-        // 🛠️ RENDERERS DE BOTONES SEPARADOS
         tablaArticulos.getColumnModel().getColumn(5).setCellRenderer(new BotonSimpleRenderer("Editar"));
         tablaArticulos.getColumnModel().getColumn(6).setCellRenderer(new BotonSimpleRenderer("Borrar"));
         tablaArticulos.getColumnModel().getColumn(5).setPreferredWidth(80);
         tablaArticulos.getColumnModel().getColumn(6).setPreferredWidth(80);
 
-        // 🛠️ LISTENER SEPARADO POR COLUMNA
         tablaArticulos.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
@@ -216,16 +254,32 @@ public class AdminDashboardFrame extends JFrame {
                 int row = tablaArticulos.rowAtPoint(e.getPoint());
 
                 if (row >= 0) {
+                    // 1. Obtenemos el título del artículo al que le dimos clic
                     String titulo = tablaArticulos.getValueAt(row, 1).toString();
 
-                    if (col == 5) { // Clic en Editar
-                        JOptionPane.showMessageDialog(AdminDashboardFrame.this, "Abriendo editor para: " + titulo);
-                    } else if (col == 6) { // Clic en Borrar
-                        int confirmar = JOptionPane.showConfirmDialog(AdminDashboardFrame.this,
-                                "¿Estás seguro de que deseas destruir los datos de este artículo?",
-                                "Confirmar Eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                        if(confirmar == JOptionPane.YES_OPTION) {
-                            JOptionPane.showMessageDialog(AdminDashboardFrame.this, "Simulando conexión REST: Artículo eliminado...");
+                    // 2. Buscamos el objeto DTO completo en nuestra lista de caché usando el título
+                    // (Sabemos que es seguro porque en MongoDB configuramos el título como "unique: true")
+                    ArticuloDTO articuloSeleccionado = listaArticulosCache.stream()
+                            .filter(a -> a.getTitulo().equals(titulo))
+                            .findFirst()
+                            .orElse(null);
+
+                    if (articuloSeleccionado != null) {
+                        if (col == 5) { // Clic en Editar
+
+                            // 🛠️ ¡MAGIA! Abrimos la ventana pasándole el Token y el Artículo completo
+                            EditarArticuloFrame editor = new EditarArticuloFrame(tokenUsuarioActual, articuloSeleccionado, AdminDashboardFrame.this);
+                            editor.setVisible(true);
+
+                        } else if (col == 6) { // Clic en Borrar
+                            int confirmar = JOptionPane.showConfirmDialog(AdminDashboardFrame.this,
+                                    "¿Estás seguro de que deseas destruir los datos de este artículo?",
+                                    "Confirmar Eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+                            if(confirmar == JOptionPane.YES_OPTION) {
+                                // Dejamos el aviso de que falta programar el backend para esta función
+                                JOptionPane.showMessageDialog(AdminDashboardFrame.this,
+                                        "El frontend detectó la orden, pero necesitamos programar la ruta DELETE en Node.js.");
+                            }
                         }
                     }
                 }
@@ -248,7 +302,7 @@ public class AdminDashboardFrame extends JFrame {
                 .count();
 
         long borradores = listaArticulosCache.stream()
-                .filter(a -> a.getEstado() != null && a.getEstado().equalsIgnoreCase("Revisión"))
+                .filter(a -> a.getEstado() != null && a.getEstado().equalsIgnoreCase("EnRevision"))
                 .count();
 
         lblTotalGlobal.setText(String.valueOf(total));
@@ -280,7 +334,7 @@ public class AdminDashboardFrame extends JFrame {
 
     private void filtrarArticulosBorradores() {
         List<ArticuloDTO> borradores = listaArticulosCache.stream()
-                .filter(a -> a.getEstado() != null && a.getEstado().equalsIgnoreCase("Revisión"))
+                .filter(a -> a.getEstado() != null && a.getEstado().equalsIgnoreCase("EnRevision"))
                 .collect(Collectors.toList());
         renderizarTabla(borradores);
     }
@@ -346,4 +400,38 @@ public class AdminDashboardFrame extends JFrame {
             return c;
         }
     }
+
+    // 🛠️ MÉTODO DE REFRESCO AUTOMÁTICO Y MANUAL
+    public void refrescarTablaServidor() {
+        try {
+            ArticuloClient client = RetrofitClient.getClient().create(ArticuloClient.class);
+
+            // Llamamos al endpoint GET /articulos para bajarnos lo último de MongoDB
+            client.obtenerArticulos().enqueue(new retrofit2.Callback<com.metroidwiki.model.ArticulosListResponse>() {
+                @Override
+                public void onResponse(retrofit2.Call<com.metroidwiki.model.ArticulosListResponse> call, retrofit2.Response<com.metroidwiki.model.ArticulosListResponse> response) {
+                    if (response.isSuccessful() && response.body() != null) {
+                        // Actualizamos nuestra memoria caché con los nuevos datos
+                        listaArticulosCache = response.body().getArticulos();
+
+                        // Volvemos a computar las tarjetas KPI de arriba
+                        actualizarContadoresKPI();
+
+                        // Volvemos a dibujar las filas con el nuevo estado
+                        renderizarTabla(listaArticulosCache);
+
+                        System.out.println("🔄 [Dashboard] Sincronización con MongoDB Atlas completada con éxito.");
+                    }
+                }
+
+                @Override
+                public void onFailure(retrofit2.Call<com.metroidwiki.model.ArticulosListResponse> call, Throwable t) {
+                    System.err.println("Fallo de red al refrescar: " + t.getMessage());
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("Error en el refresco automático: " + e.getMessage());
+        }
+    }
+
 }

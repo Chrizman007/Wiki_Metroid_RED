@@ -103,8 +103,12 @@ public class DetalleArticuloFrame extends JFrame {
 
         // Limpieza de fecha por si viene con el formato ISO de Mongo (T00:00:00...)
         String fechaLimpia = articulo.getFechaCreacion() != null ? articulo.getFechaCreacion().split("T")[0] : "Fecha estelar desconocida";
-        // Nota: Asumiendo que agregaras un campo getCreador() o similar en el futuro, por ahora simulamos con un texto genérico o dinámico.
-        JLabel lblMeta = new JLabel("Registrado por: Operador de la Federación  |  Fecha: " + fechaLimpia);
+
+        // 🛠️ CORRECCIÓN: Obtenemos dinámicamente el autor desde el DTO inyectado por Node.js
+        // 🛠️ Sintaxis corregida y limpia para Java
+        String realAutor = (articulo.getAutor() != null && !articulo.getAutor().isEmpty()) ? articulo.getAutor() : "Operador de la Federación";
+
+        JLabel lblMeta = new JLabel("Registrado por: " + realAutor + "  |  Fecha: " + fechaLimpia);
         lblMeta.setFont(new Font("Segoe UI", Font.ITALIC, 12));
         lblMeta.setForeground(textoGris);
 
@@ -113,7 +117,7 @@ public class DetalleArticuloFrame extends JFrame {
         panelIzquierdo.add(lblMeta);
 
         // Subpanel derecho: Contador de Vistas 👁️
-        JPanel panelDerecho = new JPanel(new GridBagLayout()); // GridBagLayout para centrar verticalmente
+        JPanel panelDerecho = new JPanel(new GridBagLayout());
         panelDerecho.setBackground(fondoPrincipal);
 
         JLabel lblVistas = new JLabel("👁️ " + articulo.getVistas() + " Vistas");
@@ -137,13 +141,6 @@ public class DetalleArticuloFrame extends JFrame {
         return panelCompleto;
     }
 
-    /**
-     * Crea la Ficha Técnica (Infobox) flotante de la derecha estilo Wikipedia.
-     */
-    /**
-     * Crea la Ficha Técnica (Infobox) flotante de la derecha estilo Wikipedia.
-     * Corregido: Elimina espacios fantasmas izquierdos y su altura ahora es 100% dinámica.
-     */
     private JPanel crearFichaTecnica() {
         JPanel ficha = new JPanel();
         ficha.setLayout(new BoxLayout(ficha, BoxLayout.Y_AXIS));
@@ -153,19 +150,14 @@ public class DetalleArticuloFrame extends JFrame {
                 new EmptyBorder(15, 15, 15, 15)
         ));
 
-        // 🛠️ PARCHE 1: ¡ELIMINAMOS EL TAMAÑO FIJO VERTICAL!
-        // Dejamos que BoxLayout sume la altura real de todos los componentes internos.
-
-        // Título de la Ficha
         JLabel lblFichaTitulo = new JLabel("DATOS CLASIFICADOS", SwingConstants.CENTER);
         lblFichaTitulo.setFont(new Font("Segoe UI", Font.BOLD, 13));
         lblFichaTitulo.setForeground(Color.WHITE);
         lblFichaTitulo.setBackground(panelSecundario);
         lblFichaTitulo.setOpaque(true);
         lblFichaTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
-        lblFichaTitulo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25)); // Fuerza a ocupar todo el ancho
+        lblFichaTitulo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
 
-        // Espacio para la Imagen
         JLabel lblImagenFicha = new JLabel("Cargando transmisión...", SwingConstants.CENTER);
         lblImagenFicha.setPreferredSize(new Dimension(220, 140));
         lblImagenFicha.setMaximumSize(new Dimension(220, 140));
@@ -177,11 +169,10 @@ public class DetalleArticuloFrame extends JFrame {
 
         cargarImagenFichaAsincrona(articulo.getImagen(), lblImagenFicha);
 
-        // Datos del artículo: Categoría
         JLabel lblCatTitulo = new JLabel("CATEGORÍA:");
         lblCatTitulo.setFont(new Font("Segoe UI", Font.BOLD, 11));
         lblCatTitulo.setForeground(acentoVerde);
-        lblCatTitulo.setAlignmentX(Component.CENTER_ALIGNMENT); // 🛠️ Sincronizado a CENTER para borrar el espacio fantasma
+        lblCatTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel lblCatValor = new JLabel(articulo.getCategoria(), SwingConstants.CENTER);
         lblCatValor.setFont(new Font("Segoe UI", Font.PLAIN, 14));
@@ -189,11 +180,10 @@ public class DetalleArticuloFrame extends JFrame {
         lblCatValor.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblCatValor.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
 
-        // Datos del artículo: Descripción Corta
         JLabel lblDescTitulo = new JLabel("DESCRIPCIÓN BREVE:");
         lblDescTitulo.setFont(new Font("Segoe UI", Font.BOLD, 11));
         lblDescTitulo.setForeground(acentoVerde);
-        lblDescTitulo.setAlignmentX(Component.CENTER_ALIGNMENT); // 🛠️ Sincronizado a CENTER
+        lblDescTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JTextArea txtDescValor = new JTextArea(articulo.getDescripcion());
         txtDescValor.setFont(new Font("Segoe UI", Font.PLAIN, 13));
@@ -202,13 +192,10 @@ public class DetalleArticuloFrame extends JFrame {
         txtDescValor.setEditable(false);
         txtDescValor.setLineWrap(true);
         txtDescValor.setWrapStyleWord(true);
-        txtDescValor.setAlignmentX(Component.CENTER_ALIGNMENT); // 🛠️ Sincronizado a CENTER
+        txtDescValor.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        // 🛠️ PARCHE 2: Le permitimos un crecimiento vertical ilimitado (Integer.MAX_VALUE)
-        // pero limitamos su ancho a 220 para que use el espacio total interno de la ficha técnica de 250.
         txtDescValor.setMaximumSize(new Dimension(220, Integer.MAX_VALUE));
 
-        // Ensamblar componentes de forma secuencial en el BoxLayout
         ficha.add(lblFichaTitulo);
         ficha.add(Box.createRigidArea(new Dimension(0, 10)));
         ficha.add(lblImagenFicha);
@@ -221,28 +208,18 @@ public class DetalleArticuloFrame extends JFrame {
         ficha.add(Box.createRigidArea(new Dimension(0, 3)));
         ficha.add(txtDescValor);
 
-        // 🛠️ PARCHE 3: CONTROLADOR INTELIGENTE DE MEDIDAS
-        // Para que BorderLayout.EAST respete un ancho fijo de 250 pero mantenga una altura dinámica,
-        // creamos este panel contenedor y sobreescribimos su método getPreferredSize en caliente.
         JPanel contenedorConAnchoFijo = new JPanel(new BorderLayout()) {
             @Override
             public Dimension getPreferredSize() {
-                // Forzamos el ancho a 250, pero dejamos que la altura total se adapte al tamaño real calculado de la ficha
                 return new Dimension(250, super.getPreferredSize().height);
             }
         };
         contenedorConAnchoFijo.setBackground(fondoPrincipal);
-
-        // Metemos la ficha acoplada al NORTE del contenedor. Así, si el contenedor es muy alto por el frame,
-        // la ficha no se estira hacia abajo deformándose, sino que conserva su altura orgánica ideal.
         contenedorConAnchoFijo.add(ficha, BorderLayout.NORTH);
 
         return contenedorConAnchoFijo;
     }
 
-    /**
-     * Genera la sección inferior dedicada a la caja de comentarios de la Federación.
-     */
     private JPanel crearSeccionComentarios() {
         JPanel panelComentarios = new JPanel();
         panelComentarios.setLayout(new BoxLayout(panelComentarios, BoxLayout.Y_AXIS));
@@ -262,13 +239,11 @@ public class DetalleArticuloFrame extends JFrame {
         panelComentarios.add(lblSeccionTitulo);
         panelComentarios.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        // Cuadro para escribir un nuevo comentario
         JPanel panelEscribir = new JPanel(new BorderLayout(10, 0));
         panelEscribir.setBackground(fondoPrincipal);
         panelEscribir.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
         panelEscribir.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // TextArea en lugar de TextField para permitir multi-línea
         JTextArea txtNuevoComentario = new JTextArea("Escribe una transmisión pública...");
         txtNuevoComentario.setBackground(panelSecundario);
         txtNuevoComentario.setForeground(textoGris);
@@ -281,7 +256,6 @@ public class DetalleArticuloFrame extends JFrame {
         txtNuevoComentario.setWrapStyleWord(true);
         txtNuevoComentario.setRows(3);
 
-        // Limpieza del placeholder al enfocarse
         txtNuevoComentario.addFocusListener(new java.awt.event.FocusAdapter() {
             public void focusGained(java.awt.event.FocusEvent evt) {
                 if (txtNuevoComentario.getText().equals("Escribe una transmisión pública...")) {
@@ -298,7 +272,6 @@ public class DetalleArticuloFrame extends JFrame {
             }
         });
 
-        // Panel derecho con botón y contador de caracteres
         JPanel panelDerecha = new JPanel();
         panelDerecha.setLayout(new BoxLayout(panelDerecha, BoxLayout.Y_AXIS));
         panelDerecha.setBackground(fondoPrincipal);
@@ -316,7 +289,6 @@ public class DetalleArticuloFrame extends JFrame {
         btnComentar.setBorderPainted(false);
         btnComentar.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        // Actualizar contador de caracteres en tiempo real
         txtNuevoComentario.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyReleased(java.awt.event.KeyEvent evt) {
                 int len = txtNuevoComentario.getText().length();
@@ -327,7 +299,7 @@ public class DetalleArticuloFrame extends JFrame {
                 } else {
                     lblContador.setText(len + "/512");
                     if (len > 450) {
-                        lblContador.setForeground(new Color(255, 200, 0)); // Amarillo advertencia
+                        lblContador.setForeground(new Color(255, 200, 0));
                     } else {
                         lblContador.setForeground(textoGris);
                     }
@@ -335,7 +307,6 @@ public class DetalleArticuloFrame extends JFrame {
             }
         });
 
-        // Click en el botón ENVIAR
         btnComentar.addActionListener(e -> enviarComentario(txtNuevoComentario, btnComentar));
 
         panelDerecha.add(lblContador);
@@ -349,7 +320,6 @@ public class DetalleArticuloFrame extends JFrame {
         panelComentarios.add(panelEscribir);
         panelComentarios.add(Box.createRigidArea(new Dimension(0, 20)));
 
-        // Panel dinámico para mostrar comentarios cargados
         panelComentariosContenedor = new JPanel();
         panelComentariosContenedor.setLayout(new BoxLayout(panelComentariosContenedor, BoxLayout.Y_AXIS));
         panelComentariosContenedor.setBackground(fondoPrincipal);
@@ -365,9 +335,6 @@ public class DetalleArticuloFrame extends JFrame {
         return panelComentarios;
     }
 
-    /**
-     * Carga los comentarios del artículo de forma asíncrona
-     */
     private void cargarComentarios() {
         SwingWorker<List<ComentarioDTO>, Void> worker = new SwingWorker<>() {
             @Override
@@ -379,7 +346,7 @@ public class DetalleArticuloFrame extends JFrame {
                 if (response.isSuccessful() && response.body() != null) {
                     return response.body().getComentarios();
                 }
-                return List.of(); // Retornar lista vacía si falla
+                return List.of();
             }
 
             @Override
@@ -395,9 +362,6 @@ public class DetalleArticuloFrame extends JFrame {
         worker.execute();
     }
 
-    /**
-     * Muestra los comentarios en el panel dinámico
-     */
     private void mostrarComentarios(List<ComentarioDTO> comentarios) {
         panelComentariosContenedor.removeAll();
 
@@ -418,16 +382,13 @@ public class DetalleArticuloFrame extends JFrame {
         }
 
         panelComentariosContenedor.revalidate();
+        panelComentariosContenedor.add(Box.createRigidArea(new Dimension(0, 0))); // Layout placeholder
         panelComentariosContenedor.repaint();
     }
 
-    /**
-     * Envía un nuevo comentario al servidor
-     */
     private void enviarComentario(JTextArea txtComentario, JButton btnEnviar) {
         String contenido = txtComentario.getText().trim();
 
-        // Validaciones
         if (contenido.isEmpty() || contenido.equals("Escribe una transmisión pública...")) {
             JOptionPane.showMessageDialog(this, "El comentario no puede estar vacío", "Validación", JOptionPane.WARNING_MESSAGE);
             return;
@@ -438,7 +399,6 @@ public class DetalleArticuloFrame extends JFrame {
             return;
         }
 
-        // Desabilitar botón mientras se envía
         btnEnviar.setEnabled(false);
         btnEnviar.setText("ENVIANDO...");
 
@@ -477,7 +437,7 @@ public class DetalleArticuloFrame extends JFrame {
                             JOptionPane.INFORMATION_MESSAGE);
                     txtComentario.setText("Escribe una transmisión pública...");
                     txtComentario.setForeground(textoGris);
-                    cargarComentarios(); // Recargar comentarios
+                    cargarComentarios();
                 } catch (Exception e) {
                     JOptionPane.showMessageDialog(DetalleArticuloFrame.this,
                             "Error al enviar comentario: " + e.getMessage(),
