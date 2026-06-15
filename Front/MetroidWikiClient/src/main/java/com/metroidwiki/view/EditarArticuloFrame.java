@@ -1,10 +1,10 @@
 package com.metroidwiki.view;
 
+import com.metroidwiki.model.ArticuloDTO;
 import com.metroidwiki.model.ArticuloRequest;
 import com.metroidwiki.model.ArticuloResponse;
 import com.metroidwiki.network.ArticuloClient;
 import com.metroidwiki.network.RetrofitClient;
-// 🛠️ IMPORTAMOS NUESTRO CLIENTE gRPC
 import com.metroidwiki.network.GrpcMediaClient;
 
 import retrofit2.Call;
@@ -17,18 +17,19 @@ import javax.swing.filechooser.FileNameExtensionFilter;
 import javax.swing.plaf.basic.BasicComboBoxUI;
 import java.awt.*;
 import java.io.File;
-import javax.swing.SwingUtilities;
 
-public class NuevoArticuloFrame extends JFrame {
+public class EditarArticuloFrame extends JFrame {
 
     private final Color fondoPrincipal = new Color(25, 25, 28);
     private final Color panelSecundario = new Color(35, 35, 40);
     private final Color acentoVerde = new Color(76, 175, 80);
+    private final Color acentoAmarillo = new Color(255, 193, 7);
     private final Color textoClaro = new Color(230, 230, 230);
     private final Color textoGris = new Color(150, 150, 150);
 
     private JTextField txtTitulo;
     private JComboBox<String> cmbCategoria;
+    private JComboBox<String> cmbEstado; // 🛠️ NUEVO CAMPO DE ESTADO
     private JTextArea txtDescripcion;
     private JTextArea txtContenido;
     private JTextField txtRutaImagen;
@@ -36,22 +37,26 @@ public class NuevoArticuloFrame extends JFrame {
     private JButton btnGuardar;
 
     private String tokenJwt;
+    private ArticuloDTO articuloActual;
     private File archivoImagenSeleccionado;
+    private AdminDashboardFrame dashboardAdmin;
 
-    public NuevoArticuloFrame(String token) {
+    public EditarArticuloFrame(String token, ArticuloDTO articuloActual, AdminDashboardFrame dashboardAdmin) {
         this.tokenJwt = token;
+        this.articuloActual = articuloActual;
+        this.dashboardAdmin = dashboardAdmin;
 
-        setTitle("Redactar Nuevo Artículo");
-        setSize(650, 750);
+        setTitle("Modificar Artículo - " + articuloActual.getTitulo());
+        setSize(650, 800); // un poco más alto para acomodar el nuevo campo
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(fondoPrincipal);
         setLayout(new BorderLayout(10, 10));
 
         // --- CABECERA ---
-        JLabel lblTituloVentana = new JLabel("NUEVO REGISTRO EN LA WIKI", SwingConstants.CENTER);
+        JLabel lblTituloVentana = new JLabel("EDICIÓN DE REGISTRO CLASIFICADO", SwingConstants.CENTER);
         lblTituloVentana.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTituloVentana.setForeground(acentoVerde);
+        lblTituloVentana.setForeground(acentoAmarillo); // Amarillo para denotar "Edición"
         lblTituloVentana.setBorder(new EmptyBorder(15, 0, 10, 0));
         add(lblTituloVentana, BorderLayout.NORTH);
 
@@ -67,105 +72,78 @@ public class NuevoArticuloFrame extends JFrame {
         JLabel lblTitulo = new JLabel("Título del Artículo:");
         lblTitulo.setForeground(textoClaro);
         lblTitulo.setFont(fuenteLabel);
-        lblTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        txtTitulo = new JTextField();
+        txtTitulo = new JTextField(articuloActual.getTitulo());
         estilizarInput(txtTitulo);
-        txtTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Categoría
         JLabel lblCategoria = new JLabel("Categoría:");
         lblCategoria.setForeground(textoClaro);
         lblCategoria.setFont(fuenteLabel);
-        lblCategoria.setAlignmentX(Component.LEFT_ALIGNMENT);
-
         String[] categorias = {"Lore", "Items", "Enemigos", "Ubicaciones", "Personajes"};
         cmbCategoria = new JComboBox<>(categorias);
-        cmbCategoria.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        cmbCategoria.setBackground(panelSecundario);
-        cmbCategoria.setForeground(textoClaro);
-        cmbCategoria.setAlignmentX(Component.LEFT_ALIGNMENT);
+        estilizarComboBox(cmbCategoria);
+        cmbCategoria.setSelectedItem(articuloActual.getCategoria());
 
-        cmbCategoria.setUI(new BasicComboBoxUI());
-        cmbCategoria.setOpaque(true);
-        cmbCategoria.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                JLabel item = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                list.setBackground(panelSecundario);
-                list.setSelectionBackground(acentoVerde);
-                list.setSelectionForeground(Color.WHITE);
-
-                if (isSelected) {
-                    item.setBackground(acentoVerde);
-                    item.setForeground(Color.WHITE);
-                } else {
-                    item.setBackground(panelSecundario);
-                    item.setForeground(textoClaro);
-                }
-
-                item.setBorder(new EmptyBorder(5, 10, 5, 10));
-                return item;
-            }
-        });
+        // 🛠️ ESTADO (NUEVO)
+        JLabel lblEstado = new JLabel("Estado de Publicación:");
+        lblEstado.setForeground(textoClaro);
+        lblEstado.setFont(fuenteLabel);
+        String[] estados = {"EnBorrador", "EnRevision", "Publicado", "Archivado"};
+        cmbEstado = new JComboBox<>(estados);
+        estilizarComboBox(cmbEstado);
+        cmbEstado.setSelectedItem(articuloActual.getEstado() != null ? articuloActual.getEstado() : "EnBorrador");
 
         // Multimedia
-        JLabel lblMultimedia = new JLabel("Archivo Multimedia:");
+        JLabel lblMultimedia = new JLabel("Actualizar Archivo Multimedia (Opcional):");
         lblMultimedia.setForeground(textoClaro);
         lblMultimedia.setFont(fuenteLabel);
-        lblMultimedia.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         JPanel panelImagenSelector = new JPanel(new BorderLayout(10, 0));
         panelImagenSelector.setBackground(fondoPrincipal);
         panelImagenSelector.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        panelImagenSelector.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        txtRutaImagen = new JTextField("No se ha seleccionado ningún archivo multimedia...");
+        txtRutaImagen = new JTextField("Mantener imagen actual...");
         txtRutaImagen.setEditable(false);
         estilizarInput(txtRutaImagen);
         txtRutaImagen.setForeground(textoGris);
 
-        btnSeleccionarImagen = new JButton("Buscar...");
+        btnSeleccionarImagen = new JButton("Cambiar...");
         btnSeleccionarImagen.setFont(new Font("Segoe UI", Font.BOLD, 12));
         btnSeleccionarImagen.setBackground(panelSecundario);
         btnSeleccionarImagen.setForeground(Color.WHITE);
         btnSeleccionarImagen.setFocusPainted(false);
-        btnSeleccionarImagen.setOpaque(true);
         btnSeleccionarImagen.setBorderPainted(false);
         btnSeleccionarImagen.addActionListener(e -> abrirSelectorImagen());
 
         panelImagenSelector.add(txtRutaImagen, BorderLayout.CENTER);
         panelImagenSelector.add(btnSeleccionarImagen, BorderLayout.EAST);
 
-        // Descripción Breve
+        // Descripción
         JLabel lblDesc = new JLabel("Descripción Breve:");
         lblDesc.setForeground(textoClaro);
         lblDesc.setFont(fuenteLabel);
-        lblDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        txtDescripcion = new JTextArea(3, 20);
+        txtDescripcion = new JTextArea(articuloActual.getDescripcion(), 3, 20);
         estilizarTextArea(txtDescripcion);
         JScrollPane scrollDesc = new JScrollPane(txtDescripcion);
-        scrollDesc.setAlignmentX(Component.LEFT_ALIGNMENT);
         scrollDesc.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
-        // Contenido Completo
+        // Contenido
         JLabel lblContenido = new JLabel("Contenido / Lore:");
         lblContenido.setForeground(textoClaro);
         lblContenido.setFont(fuenteLabel);
-        lblContenido.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        txtContenido = new JTextArea(8, 20);
+        txtContenido = new JTextArea(articuloActual.getContenido(), 8, 20);
         estilizarTextArea(txtContenido);
         JScrollPane scrollContenido = new JScrollPane(txtContenido);
-        scrollContenido.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // Añadir componentes en orden al contenedor
+        // Ensamblado
         panelFormulario.add(lblTitulo); panelFormulario.add(Box.createRigidArea(new Dimension(0, 5)));
         panelFormulario.add(txtTitulo); panelFormulario.add(Box.createRigidArea(new Dimension(0, 15)));
 
         panelFormulario.add(lblCategoria); panelFormulario.add(Box.createRigidArea(new Dimension(0, 5)));
         panelFormulario.add(cmbCategoria); panelFormulario.add(Box.createRigidArea(new Dimension(0, 15)));
+
+        panelFormulario.add(lblEstado); panelFormulario.add(Box.createRigidArea(new Dimension(0, 5)));
+        panelFormulario.add(cmbEstado); panelFormulario.add(Box.createRigidArea(new Dimension(0, 15)));
 
         panelFormulario.add(lblMultimedia); panelFormulario.add(Box.createRigidArea(new Dimension(0, 5)));
         panelFormulario.add(panelImagenSelector); panelFormulario.add(Box.createRigidArea(new Dimension(0, 15)));
@@ -183,15 +161,14 @@ public class NuevoArticuloFrame extends JFrame {
         panelBotones.setBackground(fondoPrincipal);
         panelBotones.setBorder(new EmptyBorder(10, 0, 20, 0));
 
-        btnGuardar = new JButton("GUARDAR ARTÍCULO");
+        btnGuardar = new JButton("ACTUALIZAR ARTÍCULO");
         btnGuardar.setFont(new Font("Segoe UI", Font.BOLD, 14));
-        btnGuardar.setBackground(acentoVerde);
-        btnGuardar.setForeground(Color.WHITE);
-        btnGuardar.setPreferredSize(new Dimension(200, 40));
+        btnGuardar.setBackground(acentoAmarillo);
+        btnGuardar.setForeground(fondoPrincipal); // Letra oscura para contrastar con amarillo
+        btnGuardar.setPreferredSize(new Dimension(220, 40));
         btnGuardar.setFocusPainted(false);
-        btnGuardar.setOpaque(true);
         btnGuardar.setBorderPainted(false);
-        btnGuardar.addActionListener(e -> enviarArticulo());
+        btnGuardar.addActionListener(e -> enviarActualizacion());
 
         JButton btnCancelar = new JButton("Cancelar");
         btnCancelar.setFont(new Font("Segoe UI", Font.BOLD, 14));
@@ -199,7 +176,6 @@ public class NuevoArticuloFrame extends JFrame {
         btnCancelar.setForeground(Color.WHITE);
         btnCancelar.setPreferredSize(new Dimension(120, 40));
         btnCancelar.setFocusPainted(false);
-        btnCancelar.setOpaque(true);
         btnCancelar.setBorderPainted(false);
         btnCancelar.addActionListener(e -> dispose());
 
@@ -214,7 +190,7 @@ public class NuevoArticuloFrame extends JFrame {
         campo.setForeground(Color.WHITE);
         campo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
         campo.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        campo.setOpaque(true);
+        campo.setAlignmentX(Component.LEFT_ALIGNMENT);
     }
 
     private void estilizarTextArea(JTextArea area) {
@@ -224,28 +200,49 @@ public class NuevoArticuloFrame extends JFrame {
         area.setLineWrap(true);
         area.setWrapStyleWord(true);
         area.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-        area.setOpaque(true);
+        area.setAlignmentX(Component.LEFT_ALIGNMENT);
+    }
+
+    private void estilizarComboBox(JComboBox<String> combo) {
+        combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        combo.setBackground(panelSecundario);
+        combo.setForeground(textoClaro);
+        combo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        combo.setUI(new BasicComboBoxUI());
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel item = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                if (isSelected) {
+                    item.setBackground(acentoVerde);
+                    item.setForeground(Color.WHITE);
+                } else {
+                    item.setBackground(panelSecundario);
+                    item.setForeground(textoClaro);
+                }
+                item.setBorder(new EmptyBorder(5, 10, 5, 10));
+                return item;
+            }
+        });
     }
 
     private void abrirSelectorImagen() {
         JFileChooser selector = new JFileChooser();
-        selector.setDialogTitle("Seleccionar archivo multimedia de la Wiki");
-
-        FileNameExtensionFilter filtro = new FileNameExtensionFilter("Multimedia (JPG, PNG, MP4, MP3, WAV)", "jpg", "jpeg", "png", "gif", "mp4", "mov", "avi", "mp3", "wav", "ogg", "flac");
+        selector.setDialogTitle("Seleccionar nueva imagen (Opcional)");
+        FileNameExtensionFilter filtro = new FileNameExtensionFilter("Multimedia", "jpg", "jpeg", "png", "gif");
         selector.setFileFilter(filtro);
-        selector.setAcceptAllFileFilterUsed(true);
 
-        int resultado = selector.showOpenDialog(this);
-        if (resultado == JFileChooser.APPROVE_OPTION) {
+        if (selector.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
             archivoImagenSeleccionado = selector.getSelectedFile();
             txtRutaImagen.setText(archivoImagenSeleccionado.getName());
             txtRutaImagen.setForeground(Color.WHITE);
         }
     }
 
-    private void enviarArticulo() {
+    private void enviarActualizacion() {
         String titulo = txtTitulo.getText();
         String categoria = cmbCategoria.getSelectedItem().toString();
+        String estado = cmbEstado.getSelectedItem().toString(); // 🛠️ CAPTURAMOS ESTADO
         String descripcion = txtDescripcion.getText();
         String contenido = txtContenido.getText();
 
@@ -255,85 +252,75 @@ public class NuevoArticuloFrame extends JFrame {
         }
 
         btnGuardar.setEnabled(false);
-        btnGuardar.setText("GUARDANDO...");
-
-        String nombreArchivoMultimedia = (archivoImagenSeleccionado != null) ? archivoImagenSeleccionado.getName() : null;
+        btnGuardar.setText("ACTUALIZANDO...");
 
         try {
             ArticuloClient client = RetrofitClient.getClient().create(ArticuloClient.class);
-            ArticuloRequest request = new ArticuloRequest(titulo, categoria, descripcion, contenido, nombreArchivoMultimedia);
+
+            // 🛠️ USAMOS EL NUEVO CONSTRUCTOR DE 6 PARÁMETROS QUE CREAMOS
+            ArticuloRequest request = new ArticuloRequest(titulo, categoria, descripcion, contenido, null, estado);
 
             String bearerToken = "Bearer " + tokenJwt;
 
-            client.crearArticulo(bearerToken, request).enqueue(new Callback<ArticuloResponse>() {
+            client.actualizarArticulo(bearerToken, articuloActual.getId(), request).enqueue(new Callback<ArticuloResponse>() {
                 @Override
                 public void onResponse(Call<ArticuloResponse> call, Response<ArticuloResponse> response) {
-                    btnGuardar.setEnabled(true);
-                    btnGuardar.setText("GUARDAR ARTÍCULO");
+                    if (response.isSuccessful()) {
 
-                    if (response.isSuccessful() && response.body() != null && response.body().getArticulo() != null && response.body().getArticulo().getId() != null) {
+                        // 🛠️ ¡LA MAGIA DE SINCRONIZACIÓN!
+                        // Le decimos a la ventana de administración (si existe) que se refresque sola
+                        if (dashboardAdmin != null) {
+                            dashboardAdmin.refrescarTablaServidor();
+                        }
 
-                        // 🛠️ 1. OBTENEMOS EL ID DEL ARTÍCULO CREADO (Asegúrate de que tu ArticuloResponse tenga getArticulo().getId())
-                        // Si tu modelo es distinto, ajústalo aquí para extraer el ID que devuelve Node.js
-                        String idArticuloCreado = response.body().getArticulo().getId();
-
-                        // 🛠️ 2. DISPARAMOS gRPC SI HAY IMAGEN
+                        // Si eligió una imagen NUEVA, disparamos gRPC
                         if (archivoImagenSeleccionado != null && archivoImagenSeleccionado.exists()) {
-                            try {
-                                GrpcMediaClient grpcClient = new GrpcMediaClient();
-                                grpcClient.subirImagenArticulo(idArticuloCreado, archivoImagenSeleccionado, new GrpcMediaClient.UploadListener() {
-                                    @Override
-                                    public void onSuccess(String urlImagen) {
-                                        System.out.println("gRPC upload completed: " + urlImagen);
-                                        SwingUtilities.invokeLater(() -> {
-                                            JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "¡Artículo guardado con imagen en la red!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                                            dispose();
-                                        });
-                                    }
-
-                                    @Override
-                                    public void onError(Throwable t) {
-                                        System.err.println("Fallo al conectar con gRPC: " + t.getMessage());
-                                        SwingUtilities.invokeLater(() -> {
-                                            JOptionPane.showMessageDialog(NuevoArticuloFrame.this,
-                                                    "Artículo guardado, pero no se pudo subir la imagen: " + t.getMessage(),
-                                                    "Advertencia", JOptionPane.WARNING_MESSAGE);
-                                            dispose();
-                                        });
-                                    }
-                                });
-                                System.out.println("Enviando foto a la velocidad de la luz...");
-                            } catch (Exception ex) {
-                                System.err.println("Fallo al conectar con gRPC: " + ex.getMessage());
-                                JOptionPane.showMessageDialog(NuevoArticuloFrame.this,
-                                        "Artículo guardado, pero error al conectar gRPC: " + ex.getMessage(),
-                                        "Advertencia", JOptionPane.WARNING_MESSAGE);
-                                dispose();
-                            }
+                            subirNuevaImagenGrpc(articuloActual.getId());
                         } else {
-                            // Sin imagen, cerramos directamente
-                            JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "¡Artículo guardado en la red con éxito!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                            dispose();
+                            JOptionPane.showMessageDialog(EditarArticuloFrame.this, "¡Artículo actualizado con éxito!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                            dispose(); // Cerramos la ventana de edición
                         }
-
                     } else {
-                        String mensajeError = "Error del Servidor: " + response.code();
-                        if (response.body() != null && response.body().getMessage() != null) {
-                            mensajeError += " - " + response.body().getMessage();
-                        }
-                        JOptionPane.showMessageDialog(NuevoArticuloFrame.this, mensajeError, "Error", JOptionPane.ERROR_MESSAGE);
+                        btnGuardar.setEnabled(true);
+                        btnGuardar.setText("ACTUALIZAR ARTÍCULO");
+                        JOptionPane.showMessageDialog(EditarArticuloFrame.this, "Error del servidor: " + response.code(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
                 }
 
                 @Override
                 public void onFailure(Call<ArticuloResponse> call, Throwable t) {
                     btnGuardar.setEnabled(true);
-                    btnGuardar.setText("GUARDAR ARTÍCULO");
-                    JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "Fallo de red: " + t.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    btnGuardar.setText("ACTUALIZAR ARTÍCULO");
+                    JOptionPane.showMessageDialog(EditarArticuloFrame.this, "Fallo de red: " + t.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
                 }
             });
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Error interno en la aplicación.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void subirNuevaImagenGrpc(String articuloId) {
+        try {
+            GrpcMediaClient grpcClient = new GrpcMediaClient();
+            grpcClient.subirImagenArticulo(articuloId, archivoImagenSeleccionado, new GrpcMediaClient.UploadListener() {
+                @Override
+                public void onSuccess(String urlImagen) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(EditarArticuloFrame.this, "Artículo e imagen actualizados.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                        dispose();
+                    });
+                }
+                @Override
+                public void onError(Throwable t) {
+                    SwingUtilities.invokeLater(() -> {
+                        JOptionPane.showMessageDialog(EditarArticuloFrame.this, "Artículo actualizado, pero falló la imagen: " + t.getMessage(), "Aviso", JOptionPane.WARNING_MESSAGE);
+                        dispose();
+                    });
+                }
+            });
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Error al conectar gRPC.", "Error", JOptionPane.ERROR_MESSAGE);
+            dispose();
         }
     }
 }
