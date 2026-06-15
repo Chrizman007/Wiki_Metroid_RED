@@ -23,6 +23,49 @@ const config = {
 const router = express.Router();
 
 // ==========================================
+// VIEWS COOLDOWN (Per-article per-user)
+// ==========================================
+// 30 seconds cooldown (milliseconds)
+const VIEW_COOLDOWN_MS = 30 * 1000;
+
+// Structure: Map<articleId, Map<userKey, lastTimestampMillis>>
+const viewCooldownStore = new Map();
+
+// Helper that derives a user key from the request. Prefer JWT id, fallback to IP.
+function deriveUserKey(req) {
+  try {
+    const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+    if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
+      const token = authHeader.split(' ')[1];
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded && (decoded.id || decoded._id || decoded.sub)) {
+          return `user:${decoded.id || decoded._id || decoded.sub}`;
+        }
+      }
+    }
+  } catch (e) {
+    // ignore token errors and fallback to IP
+  }
+
+  // Fallback to IP address (may be same for multiple users behind NAT)
+  const ip = req.ip || req.connection && req.connection.remoteAddress || 'anonymous';
+  return `ip:${ip}`;
+}
+
+// Prune old entries periodically to avoid memory bloat
+setInterval(() => {
+  const now = Date.now();
+  const maxAge = 60 * 60 * 1000; // 1 hour
+  for (const [articleId, userMap] of viewCooldownStore.entries()) {
+    for (const [userKey, ts] of userMap.entries()) {
+      if (now - ts > maxAge) userMap.delete(userKey);
+    }
+    if (userMap.size === 0) viewCooldownStore.delete(articleId);
+  }
+}, 60 * 1000);
+
+// ==========================================
 // CONFIGURACIÓN DE gRPC (Carga del Contrato)
 // ==========================================
 // Subimos dos niveles (../../) para llegar de src/negocio a la raíz y entrar a proto/
@@ -217,6 +260,15 @@ const ArticuloRepository = {
   }
 };
 
+// Incrementar vistas en la base de datos
+ArticuloRepository.incrementarVistas = async (id) => {
+  try {
+    return await Articulo.findByIdAndUpdate(id, { $inc: { vistas: 1 } }, { new: true });
+  } catch (error) {
+    throw new ErrorBaseDeDatosException(error.message);
+  }
+};
+
 // ==========================================
 // 4. CAPA DE NEGOCIO (Servicio)
 // ==========================================
@@ -252,6 +304,41 @@ const ArticuloLogicService = {
     return new ArticuloDTO(articuloGuardado);
   }
 };
+
+// ==========================================
+// Manejo de vistas con cooldown
+// ==========================================
+async function handleArticleView(req, articleId) {
+  const userKey = deriveUserKey(req);
+  const now = Date.now();
+
+  let userMap = viewCooldownStore.get(articleId);
+  if (!userMap) {
+    userMap = new Map();
+    viewCooldownStore.set(articleId, userMap);
+  }
+
+  const lastTs = userMap.get(userKey);
+
+  if (!lastTs) {
+    // First time -> count view
+    await ArticuloRepository.incrementarVistas(articleId);
+    userMap.set(userKey, now);
+    return true;
+  }
+
+  const elapsed = now - lastTs;
+  if (elapsed >= VIEW_COOLDOWN_MS) {
+    // cooldown passed -> count view and reset
+    await ArticuloRepository.incrementarVistas(articleId);
+    userMap.set(userKey, now);
+    return true;
+  }
+
+  // within cooldown: reset timer (extend cooldown) but don't increment
+  userMap.set(userKey, now);
+  return false;
+}
 
 // ==========================================
 // 5. CAPA DE PRESENTACION (Controladores HTTP)
@@ -312,6 +399,17 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
   try {
     const articuloDTO = await ArticuloLogicService.obtenerArticuloPorId(req.params.id);
+
+    // Handle view counting with cooldown. If incremented, reflect new count in response.
+    try {
+      const incremented = await handleArticleView(req, req.params.id);
+      if (incremented) {
+        articuloDTO.vistas = (articuloDTO.vistas || 0) + 1;
+      }
+    } catch (viewErr) {
+      console.warn('No se pudo procesar el contador de vistas:', viewErr.message);
+    }
+
     res.json(articuloDTO);
   } catch (error) {
     manejarExcepcionHTTP(error, res);

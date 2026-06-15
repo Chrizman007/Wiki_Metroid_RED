@@ -389,8 +389,41 @@ public class WikiMainFrame extends JFrame {
 
         // 🛠️ PARCHE: Le decimos que cuando den clic al botón, abra nuestra hermosa vista detallada
         btnLeer.addActionListener(e -> {
-            DetalleArticuloFrame vistaDetalle = new DetalleArticuloFrame(articulo, tokenUsuarioActual, nombreUsuario);
-            vistaDetalle.setVisible(true);
+            // First, request the single article from backend to trigger view increment
+            try {
+                com.metroidwiki.network.ArticuloClient client = com.metroidwiki.network.RetrofitClient.getClient().create(com.metroidwiki.network.ArticuloClient.class);
+                retrofit2.Call<com.metroidwiki.model.ArticuloResponse> call = client.obtenerArticulo(articulo.getId(), tokenUsuarioActual != null ? "Bearer " + tokenUsuarioActual : null);
+                call.enqueue(new retrofit2.Callback<com.metroidwiki.model.ArticuloResponse>() {
+                    @Override
+                    public void onResponse(retrofit2.Call<com.metroidwiki.model.ArticuloResponse> call, retrofit2.Response<com.metroidwiki.model.ArticuloResponse> response) {
+                        com.metroidwiki.model.ArticuloDTO artToOpen = articulo;
+                        if (response.isSuccessful() && response.body() != null && response.body().getArticulo() != null) {
+                            artToOpen = response.body().getArticulo();
+                            // Update views label and cache
+                            lblVistas.setText("👁 Vistas: " + artToOpen.getVistas());
+                            for (int i = 0; i < listaArticulosCache.size(); i++) {
+                                if (listaArticulosCache.get(i).getId().equals(artToOpen.getId())) {
+                                    listaArticulosCache.set(i, artToOpen);
+                                    break;
+                                }
+                            }
+                        }
+                        DetalleArticuloFrame vistaDetalle = new DetalleArticuloFrame(artToOpen, tokenUsuarioActual, nombreUsuario);
+                        vistaDetalle.setVisible(true);
+                    }
+
+                    @Override
+                    public void onFailure(retrofit2.Call<com.metroidwiki.model.ArticuloResponse> call, Throwable t) {
+                        // fallback: open with cached article
+                        DetalleArticuloFrame vistaDetalle = new DetalleArticuloFrame(articulo, tokenUsuarioActual, nombreUsuario);
+                        vistaDetalle.setVisible(true);
+                    }
+                });
+            } catch (Exception ex) {
+                // if anything goes wrong, just open the detail view with the cached article
+                DetalleArticuloFrame vistaDetalle = new DetalleArticuloFrame(articulo, tokenUsuarioActual, nombreUsuario);
+                vistaDetalle.setVisible(true);
+            }
         });
 
         panelBotones.add(btnLeer);

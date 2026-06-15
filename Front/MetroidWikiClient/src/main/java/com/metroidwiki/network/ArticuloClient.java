@@ -8,6 +8,7 @@ import retrofit2.http.Body;
 import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.POST;
+import retrofit2.http.Path;
 
 public interface ArticuloClient {
     // Apuntamos al Gateway que nos redirigirá al microservicio de Artículos
@@ -19,4 +20,7 @@ public interface ArticuloClient {
 
     @GET("articulos")
     Call<ArticulosListResponse> obtenerArticulos();
+
+    @GET("articulos/{id}")
+    Call<ArticuloResponse> obtenerArticulo(@Path("id") String id, @Header("Authorization") String token);
 }
