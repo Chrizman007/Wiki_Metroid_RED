@@ -5,7 +5,7 @@ import retrofit2.converter.gson.GsonConverterFactory;
 
 public class RetrofitClient {
     // Gateway Nginx centralizado para todos los servicios
-    public static final String BASE_URL = "http://localhost/";
+    public static final String BASE_URL = "http://localhost:3000/";
     private static Retrofit retrofit = null;
 
     public static Retrofit getClient() {
