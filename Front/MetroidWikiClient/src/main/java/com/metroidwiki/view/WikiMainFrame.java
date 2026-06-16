@@ -22,10 +22,10 @@ public class WikiMainFrame extends JFrame {
 
     private String tokenUsuarioActual;
     private String nombreUsuario;
-    private String rolUsuario; // NUEVO: Para validar permisos
+    private String rolUsuario;
 
     private JPanel gridTarjetas;
-    private JPanel panelCategorias; // Panel oculto para las subcategorías
+    private JPanel panelCategorias;
     private JPanel panelLateral;
 
     // Memoria caché para no pedir a la BD cada vez que filtramos
@@ -76,7 +76,6 @@ public class WikiMainFrame extends JFrame {
         separador.setForeground(acentoVerde);
         separador.setBackground(acentoVerde);
 
-        // --- BOTONES PRINCIPALES ---
         JButton btnInicio = crearBotonMenu("Inicio (Todos)", true);
         btnInicio.addActionListener(e -> renderizarGrid(listaArticulosCache));
 
@@ -86,7 +85,6 @@ public class WikiMainFrame extends JFrame {
         JButton btnNuevasEntradas = crearBotonMenu("Nuevas Entradas", false);
         btnNuevasEntradas.addActionListener(e -> filtrarNuevasEntradas());
 
-        // --- MENÚ COLAPSABLE DE CATEGORÍAS ---
         JButton btnMenuCategorias = crearBotonMenu("Categorías ▼", false);
         crearPanelCategoriasColapsable();
 
@@ -98,13 +96,10 @@ public class WikiMainFrame extends JFrame {
             panelLateral.repaint();
         });
 
-        // --- BOTÓN DE ADMINISTRACIÓN (SOLO ADMINS) ---
-        // --- BOTÓN DE ADMINISTRACIÓN (SOLO ADMINS) ---
         JButton btnAdministracion = crearBotonMenu("⚙ Administración", false);
-        btnAdministracion.setForeground(new Color(255, 193, 7)); // Color dorado especial
+        btnAdministracion.setForeground(new Color(255, 193, 7));
 
         btnAdministracion.addActionListener(e -> {
-            // 🚀 MODIFICADO: Instanciamos el Dashboard y le inyectamos la caché RAM de artículos
             AdminDashboardFrame dashboard = new AdminDashboardFrame(
                     tokenUsuarioActual,
                     nombreUsuario,
@@ -126,7 +121,6 @@ public class WikiMainFrame extends JFrame {
         panelLateral.add(separador);
         panelLateral.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        // Validación de permisos
         if (rolUsuario.equals("administrador") || rolUsuario.equals("desarrollador")) {
             panelLateral.add(btnAdministracion);
             panelLateral.add(Box.createRigidArea(new Dimension(0, 10)));
@@ -139,7 +133,7 @@ public class WikiMainFrame extends JFrame {
         panelLateral.add(btnNuevasEntradas);
         panelLateral.add(Box.createRigidArea(new Dimension(0, 10)));
         panelLateral.add(btnMenuCategorias);
-        panelLateral.add(panelCategorias); // Añadimos el panel oculto justo debajo del botón
+        panelLateral.add(panelCategorias);
 
         panelLateral.add(Box.createVerticalGlue());
         panelLateral.add(btnCerrarSesion);
@@ -151,8 +145,8 @@ public class WikiMainFrame extends JFrame {
         panelCategorias = new JPanel();
         panelCategorias.setLayout(new BoxLayout(panelCategorias, BoxLayout.Y_AXIS));
         panelCategorias.setBackground(fondoLateral);
-        panelCategorias.setVisible(false); // Oculto al inicio
-        panelCategorias.setBorder(new EmptyBorder(5, 15, 5, 0)); // Sangría para que parezca submenú
+        panelCategorias.setVisible(false);
+        panelCategorias.setBorder(new EmptyBorder(5, 15, 5, 0));
 
         String[] categorias = {"Lore", "Items", "Enemigos", "Ubicaciones", "Personajes"};
         for (String cat : categorias) {
@@ -205,7 +199,40 @@ public class WikiMainFrame extends JFrame {
                 new EmptyBorder(5, 10, 5, 10)
         ));
 
+        // UX: Borrar el texto de "Buscar en la Wiki..." al hacer clic
+        txtBuscador.addFocusListener(new java.awt.event.FocusAdapter() {
+            public void focusGained(java.awt.event.FocusEvent evt) {
+                if (txtBuscador.getText().equals("Buscar en la Wiki...")) {
+                    txtBuscador.setText("");
+                    txtBuscador.setForeground(Color.WHITE);
+                }
+            }
+            public void focusLost(java.awt.event.FocusEvent evt) {
+                if (txtBuscador.getText().isEmpty()) {
+                    txtBuscador.setText("Buscar en la Wiki...");
+                    txtBuscador.setForeground(textoGris);
+                }
+            }
+        });
+
         JButton btnBuscar = crearBotonAccion("Buscar", acentoVerde);
+
+        // 🛠️ MAGIA DE BÚSQUEDA APLICADA
+        btnBuscar.addActionListener(e -> {
+            String query = txtBuscador.getText().trim().toLowerCase();
+
+            if (query.isEmpty() || query.equals("buscar en la wiki...")) {
+                renderizarGrid(listaArticulosCache); // Si está vacío, mostramos todos
+            } else {
+                // Buscamos coincidencias en Título o Categoría
+                List<com.metroidwiki.model.ArticuloDTO> resultados = listaArticulosCache.stream()
+                        .filter(a -> a.getTitulo().toLowerCase().contains(query) ||
+                                a.getCategoria().toLowerCase().contains(query))
+                        .collect(Collectors.toList());
+                renderizarGrid(resultados);
+            }
+        });
+
         JButton btnRefrescar = crearBotonAccion("Refrescar Bóveda", panelSecundario);
         btnRefrescar.addActionListener(e -> cargarArticulosDesdeRed());
 
@@ -259,7 +286,6 @@ public class WikiMainFrame extends JFrame {
                 @Override
                 public void onResponse(retrofit2.Call<com.metroidwiki.model.ArticulosListResponse> call, retrofit2.Response<com.metroidwiki.model.ArticulosListResponse> response) {
                     if (response.isSuccessful() && response.body() != null) {
-                        // Guardamos todo en nuestra memoria local para filtrarlo rápido
                         listaArticulosCache = response.body().getArticulos();
                         renderizarGrid(listaArticulosCache);
                     } else {
@@ -280,12 +306,17 @@ public class WikiMainFrame extends JFrame {
     private void renderizarGrid(List<com.metroidwiki.model.ArticuloDTO> listaAMostrar) {
         gridTarjetas.removeAll();
 
-        if (listaAMostrar.isEmpty()) {
-            JLabel lblVacio = new JLabel("No se encontraron artículos con estos filtros.");
+        // 🛠️ EL EMBUDO ESTRICTO: Solo artículos que su estado sea "Publicado" pasan a la pantalla
+        List<com.metroidwiki.model.ArticuloDTO> publicados = listaAMostrar.stream()
+                .filter(a -> "Publicado".equalsIgnoreCase(a.getEstado()))
+                .collect(Collectors.toList());
+
+        if (publicados.isEmpty()) {
+            JLabel lblVacio = new JLabel("No se encontraron artículos publicados con estos filtros.");
             lblVacio.setForeground(textoGris);
             gridTarjetas.add(lblVacio);
         } else {
-            for (com.metroidwiki.model.ArticuloDTO articulo : listaAMostrar) {
+            for (com.metroidwiki.model.ArticuloDTO articulo : publicados) {
                 gridTarjetas.add(crearTarjetaArticulo(articulo));
             }
         }
@@ -307,7 +338,6 @@ public class WikiMainFrame extends JFrame {
     // ==========================================
 
     private void filtrarDestacados() {
-        // Ordena la caché por vistas de mayor a menor
         List<com.metroidwiki.model.ArticuloDTO> destacados = listaArticulosCache.stream()
                 .sorted((a1, a2) -> Integer.compare(a2.getVistas(), a1.getVistas()))
                 .collect(Collectors.toList());
@@ -315,8 +345,6 @@ public class WikiMainFrame extends JFrame {
     }
 
     private void filtrarNuevasEntradas() {
-        // Ordena la caché por fechaCreacion (suponiendo que la fecha es un String ISO 8601 o Date)
-        // Se hace una comparación simple (el más grande/reciente va primero)
         List<com.metroidwiki.model.ArticuloDTO> recientes = listaArticulosCache.stream()
                 .sorted((a1, a2) -> {
                     if (a1.getFechaCreacion() == null || a2.getFechaCreacion() == null) return 0;
@@ -334,7 +362,7 @@ public class WikiMainFrame extends JFrame {
     }
 
     // ==========================================
-    // 5. CONSTRUCCIÓN DE LA TARJETA CON IMAGEN ASÍNCRONA
+    // 5. CONSTRUCCIÓN DE LA TARJETA
     // ==========================================
 
     private JPanel crearTarjetaArticulo(com.metroidwiki.model.ArticuloDTO articulo) {
@@ -343,7 +371,6 @@ public class WikiMainFrame extends JFrame {
         tarjeta.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 65), 1));
         tarjeta.setPreferredSize(new Dimension(240, 310));
 
-        // -- PARTE SUPERIOR: CONTENEDOR DE LA IMAGEN --
         JPanel panelImagen = new JPanel(new BorderLayout());
         panelImagen.setBackground(new Color(15, 15, 18));
         panelImagen.setPreferredSize(new Dimension(240, 150));
@@ -353,10 +380,8 @@ public class WikiMainFrame extends JFrame {
         lblIcono.setForeground(textoGris);
         panelImagen.add(lblIcono, BorderLayout.CENTER);
 
-        // 🚀 MAGIA: Cargamos la imagen en un hilo secundario para no congelar la pantalla
         cargarImagenAsincrona(articulo.getImagen(), lblIcono);
 
-        // -- PARTE CENTRAL: TEXTOS --
         JPanel panelTextos = new JPanel();
         panelTextos.setLayout(new BoxLayout(panelTextos, BoxLayout.Y_AXIS));
         panelTextos.setBackground(panelSecundario);
@@ -380,16 +405,13 @@ public class WikiMainFrame extends JFrame {
         panelTextos.add(Box.createRigidArea(new Dimension(0, 2)));
         panelTextos.add(lblVistas);
 
-        // -- PARTE INFERIOR: BOTÓN --
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 10));
         panelBotones.setBackground(panelSecundario);
 
         JButton btnLeer = crearBotonAccion("Ver", acentoVerde);
         btnLeer.setPreferredSize(new Dimension(110, 30));
 
-        // 🛠️ PARCHE: Le decimos que cuando den clic al botón, abra nuestra hermosa vista detallada
         btnLeer.addActionListener(e -> {
-            // First, request the single article from backend to trigger view increment
             try {
                 com.metroidwiki.network.ArticuloClient client = com.metroidwiki.network.RetrofitClient.getClient().create(com.metroidwiki.network.ArticuloClient.class);
                 retrofit2.Call<com.metroidwiki.model.ArticuloResponse> call = client.obtenerArticulo(articulo.getId(), tokenUsuarioActual != null ? "Bearer " + tokenUsuarioActual : null);
@@ -399,7 +421,6 @@ public class WikiMainFrame extends JFrame {
                         com.metroidwiki.model.ArticuloDTO artToOpen = articulo;
                         if (response.isSuccessful() && response.body() != null && response.body().getArticulo() != null) {
                             artToOpen = response.body().getArticulo();
-                            // Update views label and cache
                             lblVistas.setText("👁 Vistas: " + artToOpen.getVistas());
                             for (int i = 0; i < listaArticulosCache.size(); i++) {
                                 if (listaArticulosCache.get(i).getId().equals(artToOpen.getId())) {
@@ -414,13 +435,11 @@ public class WikiMainFrame extends JFrame {
 
                     @Override
                     public void onFailure(retrofit2.Call<com.metroidwiki.model.ArticuloResponse> call, Throwable t) {
-                        // fallback: open with cached article
                         DetalleArticuloFrame vistaDetalle = new DetalleArticuloFrame(articulo, tokenUsuarioActual, nombreUsuario);
                         vistaDetalle.setVisible(true);
                     }
                 });
             } catch (Exception ex) {
-                // if anything goes wrong, just open the detail view with the cached article
                 DetalleArticuloFrame vistaDetalle = new DetalleArticuloFrame(articulo, tokenUsuarioActual, nombreUsuario);
                 vistaDetalle.setVisible(true);
             }
@@ -466,16 +485,12 @@ public class WikiMainFrame extends JFrame {
                 try {
                     ImageIcon icono = get();
                     if (icono != null) {
-                        lblIcono.setText(""); // Quitamos el texto de carga
-                        lblIcono.setIcon(icono); // ¡Pintamos la foto!
+                        lblIcono.setText("");
+                        lblIcono.setIcon(icono);
                     } else {
                         lblIcono.setText("IMAGEN CORRUPTA");
                     }
                 } catch (Exception e) {
-                    // 🛠️ LÍNEA MÁGICA: Esto imprimirá el verdadero "Jefe Final" en la consola de IntelliJ
-                    System.err.println("❌ Error detallado al cargar la imagen [" + nombreImagen + "]:");
-                    e.printStackTrace();
-
                     lblIcono.setText("ERROR DE RED");
                 }
             }
@@ -514,10 +529,4 @@ public class WikiMainFrame extends JFrame {
         return boton;
     }
 
-    // Método principal para pruebas (Acuérdate de pasarle el tercer parámetro: el ROL)
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(() -> {
-            new WikiMainFrame("token_test", "Samus Aran", "administrador").setVisible(true);
-        });
-    }
 }

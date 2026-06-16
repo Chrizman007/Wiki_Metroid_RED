@@ -46,6 +46,31 @@ function deriveUserKey(req) {
   return `ip:${ip}`;
 }
 
+async function handleArticleView(req, articleId) {
+  const userKey = deriveUserKey(req);
+  const now = Date.now();
+
+  // Si el artículo no está en la memoria caché de vistas, lo agregamos
+  if (!viewCooldownStore.has(articleId)) {
+    viewCooldownStore.set(articleId, new Map());
+  }
+
+  const userMap = viewCooldownStore.get(articleId);
+  const lastViewTime = userMap.get(userKey) || 0;
+
+  // Si ya pasaron los 30 segundos de seguridad (Cooldown)
+  if (now - lastViewTime > VIEW_COOLDOWN_MS) {
+    userMap.set(userKey, now); 
+    
+    await ArticuloRepository.incrementarVistas(articleId);
+    return true; 
+  }
+  
+  // Si no pasaron 30 segundos, ignoramos la vista para evitar spam
+  return false; 
+}
+
+// Este es el basurero automático que limpia la RAM de Node.js cada hora
 setInterval(() => {
   const now = Date.now();
   const maxAge = 60 * 60 * 1000; 
