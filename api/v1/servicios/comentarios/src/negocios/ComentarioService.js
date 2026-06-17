@@ -125,6 +125,14 @@ const ComentarioRepository = {
       session.endSession();
       throw new ComentarioException('Error al crear comentario: ' + err.message);
     }
+  },
+
+  eliminarPorId: async (id) => {
+    try {
+      return await Comentario.findByIdAndDelete(id);
+    } catch (err) {
+      throw new ComentarioException('Error en base de datos al eliminar: ' + err.message);
+    }
   }
 };
 
@@ -145,6 +153,16 @@ const ComentarioService = {
 
     const comentario = await ComentarioRepository.crearConSecuencia(articuloId, autorId, autorNombre, contenido);
     return new ComentarioDTO(comentario);
+  },
+
+  eliminarComentario: async (id) => {
+    if (!mongoose.Types.ObjectId.isValid(id)) throw new BadRequestException('ID de comentario inválido');
+    
+    const eliminado = await ComentarioRepository.eliminarPorId(id);
+    if (!eliminado) {
+      throw new NotFoundException(id);
+    }
+    return true;
   }
 };
 
@@ -183,15 +201,31 @@ router.get('/:articuloId', async (req, res) => {
  *   post:
  *     summary: Agrega un comentario a un artículo (Requiere token)
  */
-router.post('/:articuloId', verificarPermisos(['administrador', 'lector']), async (req, res) => {
+router.post('/:articuloId', verificarPermisos(['administrador', 'lector', 'desarrollador']), async (req, res) => {
   try {
     const { articuloId } = req.params;
-    const autorId = req.user.id;
+    const autorId = req.user.id || req.user._id || req.user.sub;
     const autorNombre = req.user.nombre || req.user.name || 'Usuario';
     const { contenido } = req.body;
 
     const comentarioDTO = await ComentarioService.agregarComentario(articuloId, autorId, autorNombre, contenido);
     res.status(201).json({ message: 'Comentario creado', comentario: comentarioDTO });
+  } catch (err) {
+    manejarError(res, err);
+  }
+});
+
+/**
+ * @swagger
+ * /comentarios/{id}:
+ *   delete:
+ *     summary: Elimina un comentario (Solo administradores)
+ */
+router.delete('/:id', verificarPermisos(['administrador']), async (req, res) => {
+  try {
+    const { id } = req.params;
+    await ComentarioService.eliminarComentario(id);
+    res.status(200).json({ message: 'Comentario eliminado por un administrador.' });
   } catch (err) {
     manejarError(res, err);
   }
@@ -205,7 +239,7 @@ module.exports = { router, config };
 async function startServer() {
   try {
     await mongoose.connect(config.mongoUri);
-    console.log('Conectado a MongoDB (Comentarios)');
+    console.log('Conectado a MongoDB Atlas (Comentarios)');
 
     const app = express();
     app.use(express.json());

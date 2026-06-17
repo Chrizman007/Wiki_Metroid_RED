@@ -19,11 +19,12 @@ import java.util.List;
 
 public class DetalleArticuloFrame extends JFrame {
 
-    // Paleta de colores (Modo Oscuro Metroid Oficial)
+    // Paleta de colores
     private final Color fondoPrincipal = new Color(25, 25, 28);
     private final Color panelSecundario = new Color(35, 35, 40);
     private final Color fondoFicha = new Color(18, 18, 20);
     private final Color acentoVerde = new Color(76, 175, 80);
+    private final Color acentoRojo = new Color(244, 67, 54); // 🛠️ Color para moderar
     private final Color textoClaro = new Color(230, 230, 230);
     private final Color textoGris = new Color(150, 150, 150);
 
@@ -31,20 +32,21 @@ public class DetalleArticuloFrame extends JFrame {
     private String tokenUsuario;
     private String nombreUsuario;
     private String usuarioIdActual;
+    private String rolUsuarioActual; // 🛠️ Variable para guardar el rol
     private JPanel panelComentariosContenedor;
 
     public DetalleArticuloFrame(ArticuloDTO articulo, String token, String nombreUsuario) {
         this.articulo = articulo;
         this.tokenUsuario = token;
         this.nombreUsuario = nombreUsuario != null ? nombreUsuario : "Usuario";
-        this.usuarioIdActual = extraerIdUsuarioDesdeToken(token);
+        this.usuarioIdActual = extraerDatoDesdeToken(token, "\"id\"");
+        this.rolUsuarioActual = extraerDatoDesdeToken(token, "\"rol\""); // 🛠️ Extraemos el rol del JWT
 
         setTitle("Federación Galáctica - " + articulo.getTitulo());
         setSize(850, 750);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
-        // Contenedor principal con scroll por si el artículo es muy extenso
         JPanel panelContenedorAbsoluto = new JPanel(new BorderLayout());
         panelContenedorAbsoluto.setBackground(fondoPrincipal);
 
@@ -54,15 +56,12 @@ public class DetalleArticuloFrame extends JFrame {
         scrollGeneral.getVerticalScrollBar().setUnitIncrement(16);
         add(scrollGeneral, BorderLayout.CENTER);
 
-        // --- 1. BLOQUE DE ENCABEZADO ---
         panelContenedorAbsoluto.add(crearHeaderArticulo(), BorderLayout.NORTH);
 
-        // --- 2. CUERPO CENTRAL (Texto + Ficha Técnica a la derecha) ---
         JPanel panelCuerpoCentral = new JPanel(new BorderLayout(25, 0));
         panelCuerpoCentral.setBackground(fondoPrincipal);
         panelCuerpoCentral.setBorder(new EmptyBorder(10, 30, 20, 30));
 
-        // Texto del Lore (Izquierda)
         JTextArea txtLore = new JTextArea(articulo.getContenido());
         txtLore.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         txtLore.setForeground(textoClaro);
@@ -72,27 +71,18 @@ public class DetalleArticuloFrame extends JFrame {
         txtLore.setWrapStyleWord(true);
         panelCuerpoCentral.add(txtLore, BorderLayout.CENTER);
 
-        // Ficha Técnica / Infobox (Derecha)
         panelCuerpoCentral.add(crearFichaTecnica(), BorderLayout.EAST);
-
         panelContenedorAbsoluto.add(panelCuerpoCentral, BorderLayout.CENTER);
-
-        // --- 3. SECCIÓN DE COMENTARIOS (Hasta abajo de todo) ---
         panelContenedorAbsoluto.add(crearSeccionComentarios(), BorderLayout.SOUTH);
 
-        // Cargar comentarios del artículo de forma asíncrona
         cargarComentarios();
     }
 
-    /**
-     * Construye la cabecera con el Título, Autor, Fecha y las Vistas alineadas a la derecha.
-     */
     private JPanel crearHeaderArticulo() {
         JPanel panelHeader = new JPanel(new BorderLayout());
         panelHeader.setBackground(fondoPrincipal);
         panelHeader.setBorder(new EmptyBorder(25, 30, 15, 30));
 
-        // Subpanel izquierdo: Título + Datos del Creador
         JPanel panelIzquierdo = new JPanel();
         panelIzquierdo.setLayout(new BoxLayout(panelIzquierdo, BoxLayout.Y_AXIS));
         panelIzquierdo.setBackground(fondoPrincipal);
@@ -101,11 +91,7 @@ public class DetalleArticuloFrame extends JFrame {
         lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
         lblTitulo.setForeground(acentoVerde);
 
-        // Limpieza de fecha por si viene con el formato ISO de Mongo (T00:00:00...)
         String fechaLimpia = articulo.getFechaCreacion() != null ? articulo.getFechaCreacion().split("T")[0] : "Fecha estelar desconocida";
-
-        // 🛠️ CORRECCIÓN: Obtenemos dinámicamente el autor desde el DTO inyectado por Node.js
-        // 🛠️ Sintaxis corregida y limpia para Java
         String realAutor = (articulo.getAutor() != null && !articulo.getAutor().isEmpty()) ? articulo.getAutor() : "Operador de la Federación";
 
         JLabel lblMeta = new JLabel("Registrado por: " + realAutor + "  |  Fecha: " + fechaLimpia);
@@ -116,7 +102,6 @@ public class DetalleArticuloFrame extends JFrame {
         panelIzquierdo.add(Box.createRigidArea(new Dimension(0, 5)));
         panelIzquierdo.add(lblMeta);
 
-        // Subpanel derecho: Contador de Vistas 👁️
         JPanel panelDerecho = new JPanel(new GridBagLayout());
         panelDerecho.setBackground(fondoPrincipal);
 
@@ -125,7 +110,6 @@ public class DetalleArticuloFrame extends JFrame {
         lblVistas.setForeground(acentoVerde);
         panelDerecho.add(lblVistas);
 
-        // Separador estético inferior
         JSeparator lineaDivisoria = new JSeparator();
         lineaDivisoria.setForeground(panelSecundario);
         lineaDivisoria.setBackground(panelSecundario);
@@ -193,7 +177,6 @@ public class DetalleArticuloFrame extends JFrame {
         txtDescValor.setLineWrap(true);
         txtDescValor.setWrapStyleWord(true);
         txtDescValor.setAlignmentX(Component.CENTER_ALIGNMENT);
-
         txtDescValor.setMaximumSize(new Dimension(220, Integer.MAX_VALUE));
 
         ficha.add(lblFichaTitulo);
@@ -263,7 +246,6 @@ public class DetalleArticuloFrame extends JFrame {
                     txtNuevoComentario.setForeground(textoClaro);
                 }
             }
-
             public void focusLost(java.awt.event.FocusEvent evt) {
                 if (txtNuevoComentario.getText().isEmpty()) {
                     txtNuevoComentario.setText("Escribe una transmisión pública...");
@@ -295,7 +277,7 @@ public class DetalleArticuloFrame extends JFrame {
                 if (len > 512) {
                     txtNuevoComentario.setText(txtNuevoComentario.getText().substring(0, 512));
                     lblContador.setText("512/512 (LÍMITE ALCANZADO)");
-                    lblContador.setForeground(new Color(255, 100, 100));
+                    lblContador.setForeground(acentoRojo);
                 } else {
                     lblContador.setText(len + "/512");
                     if (len > 450) {
@@ -373,17 +355,104 @@ public class DetalleArticuloFrame extends JFrame {
             panelComentariosContenedor.add(lblSinComentarios);
         } else {
             for (ComentarioDTO comentario : comentarios) {
-                panelComentariosContenedor.add(crearGloboComentario(
-                        obtenerNombreAutor(comentario),
-                        comentario.getContenido()
-                ));
+                // 🛠️ Le pasamos el objeto comentario completo para poder sacar su ID si lo queremos borrar
+                panelComentariosContenedor.add(crearGloboComentario(comentario, obtenerNombreAutor(comentario)));
                 panelComentariosContenedor.add(Box.createRigidArea(new Dimension(0, 8)));
             }
         }
 
         panelComentariosContenedor.revalidate();
-        panelComentariosContenedor.add(Box.createRigidArea(new Dimension(0, 0))); // Layout placeholder
+        panelComentariosContenedor.add(Box.createRigidArea(new Dimension(0, 0)));
         panelComentariosContenedor.repaint();
+    }
+
+    private JPanel crearGloboComentario(ComentarioDTO comentario, String usuario) {
+        JPanel globo = new JPanel();
+        globo.setLayout(new BoxLayout(globo, BoxLayout.Y_AXIS));
+        globo.setBackground(panelSecundario);
+        globo.setBorder(new EmptyBorder(10, 15, 10, 15));
+        globo.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        // 🛠️ HEADER DEL COMENTARIO (Usuario a la izquierda, Botón a la derecha)
+        JPanel panelHeaderComentario = new JPanel(new BorderLayout());
+        panelHeaderComentario.setBackground(panelSecundario);
+        panelHeaderComentario.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panelHeaderComentario.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
+
+        JLabel lblUser = new JLabel(usuario);
+        lblUser.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblUser.setForeground(acentoVerde);
+        panelHeaderComentario.add(lblUser, BorderLayout.WEST);
+
+        // 🛠️ REGLA DE NEGOCIO: Mostrar botón borrar SOLO si es administrador
+        if ("administrador".equalsIgnoreCase(rolUsuarioActual)) {
+            JButton btnBorrar = new JButton("X");
+            btnBorrar.setFont(new Font("Segoe UI", Font.BOLD, 12)); // Letra un poco más grande
+            btnBorrar.setBackground(acentoRojo);
+            btnBorrar.setForeground(Color.WHITE);
+
+            // 🛠️ LOS 3 ESCUDOS DE JAVA SWING PARA BOTONES PLANOS
+            btnBorrar.setFocusPainted(false);
+            btnBorrar.setBorderPainted(false); // Le quita el borde 3D del Sistema Operativo
+            btnBorrar.setOpaque(true);         // Fuerza a que se pinte tu rojo intenso
+
+            btnBorrar.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8)); // Un poco más de ancho
+            btnBorrar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+            btnBorrar.setToolTipText("Eliminar transmisión (Moderar)");
+
+            // Evento para eliminar
+            btnBorrar.addActionListener(e -> borrarComentarioREST(comentario.getId()));
+
+            panelHeaderComentario.add(btnBorrar, BorderLayout.EAST);
+        }
+
+        JTextArea txtMensaje = new JTextArea(comentario.getContenido());
+        txtMensaje.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        txtMensaje.setForeground(textoClaro);
+        txtMensaje.setBackground(panelSecundario);
+        txtMensaje.setEditable(false);
+        txtMensaje.setLineWrap(true);
+        txtMensaje.setWrapStyleWord(false);
+        txtMensaje.setBorder(null);
+        txtMensaje.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        globo.add(panelHeaderComentario);
+        globo.add(Box.createRigidArea(new Dimension(0, 5)));
+        globo.add(txtMensaje);
+
+        return globo;
+    }
+
+    private void borrarComentarioREST(String idComentario) {
+        int confirmar = JOptionPane.showConfirmDialog(this,
+                "¿Estás seguro de que deseas eliminar este comentario por violar los protocolos de la Federación?",
+                "Moderar Transmisión", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+
+        if (confirmar == JOptionPane.YES_OPTION) {
+            try {
+                ComentarioClient client = RetrofitClient.getClient().create(ComentarioClient.class);
+                String bearerToken = "Bearer " + tokenUsuario;
+
+                // ⚠️ NECESITAS AGREGAR EL MÉTODO eliminarComentario EN TU INTERFAZ Retrofit
+                client.eliminarComentario(idComentario, bearerToken).enqueue(new Callback<Void>() {
+                    @Override
+                    public void onResponse(Call<Void> call, Response<Void> response) {
+                        if (response.isSuccessful()) {
+                            cargarComentarios();
+                        } else {
+                            JOptionPane.showMessageDialog(DetalleArticuloFrame.this, "Error del servidor al borrar.", "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+
+                    @Override
+                    public void onFailure(Call<Void> call, Throwable t) {
+                        JOptionPane.showMessageDialog(DetalleArticuloFrame.this, "Fallo de red: " + t.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                });
+            } catch (Exception e) {
+                JOptionPane.showMessageDialog(this, "Error interno de la aplicación.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     private void enviarComentario(JTextArea txtComentario, JButton btnEnviar) {
@@ -449,87 +518,34 @@ public class DetalleArticuloFrame extends JFrame {
         worker.execute();
     }
 
-    private JPanel crearGloboComentario(String usuario, String mensaje) {
-        JPanel globo = new JPanel();
-        globo.setLayout(new BoxLayout(globo, BoxLayout.Y_AXIS));
-        globo.setBackground(panelSecundario);
-        globo.setBorder(new EmptyBorder(10, 15, 10, 15));
-        globo.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel lblUser = new JLabel(usuario);
-        lblUser.setFont(new Font("Segoe UI", Font.BOLD, 12));
-        lblUser.setForeground(acentoVerde);
-        lblUser.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JTextArea txtMensaje = new JTextArea(mensaje);
-        txtMensaje.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-        txtMensaje.setForeground(textoClaro);
-        txtMensaje.setBackground(panelSecundario);
-        txtMensaje.setEditable(false);
-        txtMensaje.setLineWrap(true);
-        txtMensaje.setWrapStyleWord(false);
-        txtMensaje.setOpaque(false);
-        txtMensaje.setBorder(null);
-        txtMensaje.setAlignmentX(Component.LEFT_ALIGNMENT);
-        txtMensaje.setMaximumSize(new Dimension(600, Integer.MAX_VALUE));
-        txtMensaje.setMinimumSize(new Dimension(100, 40));
-
-        globo.add(lblUser);
-        globo.add(Box.createRigidArea(new Dimension(0, 3)));
-        globo.add(txtMensaje);
-
-        return globo;
-    }
-
     private String obtenerNombreAutor(ComentarioDTO comentario) {
-        if (comentario == null) {
-            return "Anónimo";
-        }
-        if (usuarioIdActual != null && usuarioIdActual.equals(comentario.getAutorId())) {
-            return nombreUsuario;
-        }
-        if (comentario.getAutorNombre() != null && !comentario.getAutorNombre().isEmpty()) {
-            return comentario.getAutorNombre();
-        }
-        if (comentario.getAutorId() != null) {
-            return comentario.getAutorId();
-        }
+        if (comentario == null) return "Anónimo";
+        if (usuarioIdActual != null && usuarioIdActual.equals(comentario.getAutorId())) return nombreUsuario;
+        if (comentario.getAutorNombre() != null && !comentario.getAutorNombre().isEmpty()) return comentario.getAutorNombre();
+        if (comentario.getAutorId() != null) return comentario.getAutorId();
         return "Anónimo";
     }
 
-    private String extraerIdUsuarioDesdeToken(String token) {
-        if (token == null || token.isEmpty()) {
-            return null;
-        }
+    // 🛠️ FUNCIÓN GENERALIZADA PARA EXTRAER CUALQUIER DATO DEL JWT (id o rol)
+    private String extraerDatoDesdeToken(String token, String keyBuscada) {
+        if (token == null || token.isEmpty()) return null;
         try {
             String jwt = token.startsWith("Bearer ") ? token.substring(7) : token;
             String[] partes = jwt.split("\\.");
-            if (partes.length < 2) {
-                return null;
-            }
+            if (partes.length < 2) return null;
+
             String payload = new String(Base64.getUrlDecoder().decode(partes[1]));
-            int idx = payload.indexOf("\"id\"");
-            if (idx == -1) {
-                return null;
-            }
+            int idx = payload.indexOf(keyBuscada);
+            if (idx == -1) return null;
+
             int colon = payload.indexOf(':', idx);
-            if (colon == -1) {
-                return null;
-            }
+            if (colon == -1) return null;
+
             int start = colon + 1;
-            while (start < payload.length() && Character.isWhitespace(payload.charAt(start))) {
+            while (start < payload.length() && (Character.isWhitespace(payload.charAt(start)) || payload.charAt(start) == '"')) {
                 start++;
             }
-            if (start >= payload.length()) {
-                return null;
-            }
-            if (payload.charAt(start) == '"') {
-                int end = payload.indexOf('"', start + 1);
-                if (end == -1) {
-                    return null;
-                }
-                return payload.substring(start + 1, end);
-            }
+
             int end = start;
             while (end < payload.length() && (Character.isLetterOrDigit(payload.charAt(end)) || payload.charAt(end) == '-' || payload.charAt(end) == '_')) {
                 end++;

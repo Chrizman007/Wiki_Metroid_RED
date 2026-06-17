@@ -5,6 +5,7 @@ import com.metroidwiki.model.ComentarioResponse;
 import com.metroidwiki.model.ComentariosListResponse;
 import retrofit2.Call;
 import retrofit2.http.Body;
+import retrofit2.http.DELETE; // 🛠️ NUEVO: Importamos DELETE
 import retrofit2.http.GET;
 import retrofit2.http.Header;
 import retrofit2.http.POST;
@@ -26,5 +27,12 @@ public interface ComentarioClient {
             @Path("articuloId") String articuloId,
             @Header("Authorization") String token,
             @Body ComentarioRequest request
+    );
+
+    // Eliminar un comentario (Moderación)
+    @DELETE("comentarios/{id}")
+    Call<Void> eliminarComentario(
+            @Path("id") String idComentario,
+            @Header("Authorization") String token
     );
 }

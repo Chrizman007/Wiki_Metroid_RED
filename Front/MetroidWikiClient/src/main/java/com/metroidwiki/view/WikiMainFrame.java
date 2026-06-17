@@ -56,6 +56,51 @@ public class WikiMainFrame extends JFrame {
     }
 
     // ==========================================
+    // 🛠️ HERRAMIENTA: CARGADOR DE ÍCONOS ULTRA-HD
+    // ==========================================
+    private ImageIcon cargarIcono(String ruta, int width, int height) {
+        try {
+            URL imgUrl = getClass().getResource(ruta);
+            if (imgUrl != null) {
+                // 1. Leemos la imagen original
+                Image imgOriginal = ImageIO.read(imgUrl);
+
+                // 2. Creamos un lienzo compatible con la pantalla actual (Mejora los colores)
+                GraphicsEnvironment env = GraphicsEnvironment.getLocalGraphicsEnvironment();
+                GraphicsDevice device = env.getDefaultScreenDevice();
+                GraphicsConfiguration config = device.getDefaultConfiguration();
+
+                // Creamos una imagen optimizada para tu tarjeta gráfica
+                java.awt.image.BufferedImage imgRedimensionada = config.createCompatibleImage(width, height, java.awt.Transparency.TRANSLUCENT);
+
+                // 3. Invocamos al motor de renderizado 2D más pesado de Java
+                Graphics2D g2d = imgRedimensionada.createGraphics();
+
+                // 🚀 COMBO DEFINITIVO DE ANTIALIASING:
+                // Bilinear suele ser más limpio que Bicúbico para íconos pequeños de interfaz
+                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                // Text text-antialiasing por si tu ícono tiene letras incrustadas
+                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+                // Mejora la precisión de las curvas finas
+                g2d.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
+
+                // 4. Dibujamos
+                g2d.drawImage(imgOriginal, 0, 0, width, height, null);
+                g2d.dispose();
+
+                return new ImageIcon(imgRedimensionada);
+            } else {
+                System.err.println("⚠️ No se encontró la imagen en resources: " + ruta);
+            }
+        } catch (Exception e) {
+            System.err.println("❌ Error cargando icono " + ruta + ": " + e.getMessage());
+        }
+        return null;
+    }
+
+    // ==========================================
     // 1. BARRA LATERAL (Con filtros y permisos)
     // ==========================================
 
@@ -66,9 +111,16 @@ public class WikiMainFrame extends JFrame {
         panelLateral.setPreferredSize(new Dimension(240, 0));
         panelLateral.setBorder(new EmptyBorder(20, 10, 10, 20));
 
-        JLabel lblLogo = new JLabel("METROID WIKI");
-        lblLogo.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblLogo.setForeground(Color.WHITE);
+        // 🛠️ LOGO PERSONALIZADO
+        JLabel lblLogo = new JLabel();
+        ImageIcon logoIcon = cargarIcono("/icons/logo.jpg", 180, 80);
+        if (logoIcon != null) {
+            lblLogo.setIcon(logoIcon);
+        } else {
+            lblLogo.setText("METROID WIKI");
+            lblLogo.setFont(new Font("Segoe UI", Font.BOLD, 20));
+            lblLogo.setForeground(Color.WHITE);
+        }
         lblLogo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JSeparator separador = new JSeparator();
@@ -76,16 +128,23 @@ public class WikiMainFrame extends JFrame {
         separador.setForeground(acentoVerde);
         separador.setBackground(acentoVerde);
 
+        // --- BOTONES CON ÍCONOS INYECTADOS ---
         JButton btnInicio = crearBotonMenu("Inicio (Todos)", true);
         btnInicio.addActionListener(e -> renderizarGrid(listaArticulosCache));
 
-        JButton btnDestacados = crearBotonMenu("Destacados (Top Vistas)", false);
+        JButton btnDestacados = crearBotonMenu("Destacados", false);
+        btnDestacados.setIcon(cargarIcono("/icons/destaca.png", 20, 20));
+        btnDestacados.setIconTextGap(10);
         btnDestacados.addActionListener(e -> filtrarDestacados());
 
         JButton btnNuevasEntradas = crearBotonMenu("Nuevas Entradas", false);
+        btnNuevasEntradas.setIcon(cargarIcono("/icons/nuevos.png", 20, 20));
+        btnNuevasEntradas.setIconTextGap(10);
         btnNuevasEntradas.addActionListener(e -> filtrarNuevasEntradas());
 
         JButton btnMenuCategorias = crearBotonMenu("Categorías ▼", false);
+        btnMenuCategorias.setIcon(cargarIcono("/icons/categorias.png", 20, 20));
+        btnMenuCategorias.setIconTextGap(10);
         crearPanelCategoriasColapsable();
 
         btnMenuCategorias.addActionListener(e -> {
@@ -96,7 +155,9 @@ public class WikiMainFrame extends JFrame {
             panelLateral.repaint();
         });
 
-        JButton btnAdministracion = crearBotonMenu("⚙ Administración", false);
+        JButton btnAdministracion = crearBotonMenu("Administración", false);
+        btnAdministracion.setIcon(cargarIcono("/icons/admin.png", 20, 20));
+        btnAdministracion.setIconTextGap(10);
         btnAdministracion.setForeground(new Color(255, 193, 7));
 
         btnAdministracion.addActionListener(e -> {
@@ -109,6 +170,8 @@ public class WikiMainFrame extends JFrame {
         });
 
         JButton btnCerrarSesion = crearBotonMenu("Cerrar Sesión", false);
+        btnCerrarSesion.setIcon(cargarIcono("/icons/salir.png", 20, 20));
+        btnCerrarSesion.setIconTextGap(10);
         btnCerrarSesion.setForeground(new Color(255, 100, 100));
         btnCerrarSesion.addActionListener(e -> {
             new LoginFrame().setVisible(true);
@@ -199,7 +262,6 @@ public class WikiMainFrame extends JFrame {
                 new EmptyBorder(5, 10, 5, 10)
         ));
 
-        // UX: Borrar el texto de "Buscar en la Wiki..." al hacer clic
         txtBuscador.addFocusListener(new java.awt.event.FocusAdapter() {
             public void focusGained(java.awt.event.FocusEvent evt) {
                 if (txtBuscador.getText().equals("Buscar en la Wiki...")) {
@@ -217,14 +279,11 @@ public class WikiMainFrame extends JFrame {
 
         JButton btnBuscar = crearBotonAccion("Buscar", acentoVerde);
 
-        // 🛠️ MAGIA DE BÚSQUEDA APLICADA
         btnBuscar.addActionListener(e -> {
             String query = txtBuscador.getText().trim().toLowerCase();
-
             if (query.isEmpty() || query.equals("buscar en la wiki...")) {
-                renderizarGrid(listaArticulosCache); // Si está vacío, mostramos todos
+                renderizarGrid(listaArticulosCache);
             } else {
-                // Buscamos coincidencias en Título o Categoría
                 List<com.metroidwiki.model.ArticuloDTO> resultados = listaArticulosCache.stream()
                         .filter(a -> a.getTitulo().toLowerCase().contains(query) ||
                                 a.getCategoria().toLowerCase().contains(query))
@@ -233,15 +292,24 @@ public class WikiMainFrame extends JFrame {
             }
         });
 
-        JButton btnRefrescar = crearBotonAccion("Refrescar Bóveda", panelSecundario);
+        // 🛠️ BOTÓN DE REFRESCAR (SOLO ÍCONO)
+        JButton btnRefrescar = crearBotonAccion("", panelSecundario);
+        btnRefrescar.setIcon(cargarIcono("/icons/actualizar.png", 22, 22)); // <-- Cambia el nombre si usaste otro
+        btnRefrescar.setPreferredSize(new Dimension(45, 35));
+        btnRefrescar.setToolTipText("Refrescar Bóveda de Artículos"); // Para que el usuario sepa qué hace
         btnRefrescar.addActionListener(e -> cargarArticulosDesdeRed());
 
         panelHerramientas.add(txtBuscador);
         panelHerramientas.add(btnBuscar);
         panelHerramientas.add(btnRefrescar);
 
-        if (rolUsuario.equals("administrador")) {
-            JButton btnNuevoArticulo = crearBotonAccion("Nuevo Artículo", new Color(0, 123, 255));
+        if (rolUsuario.equals("administrador") || rolUsuario.equals("desarrollador")) {
+            // 🛠️ BOTÓN NUEVO ARTÍCULO (SOLO ÍCONO)
+            JButton btnNuevoArticulo = crearBotonAccion("", new Color(0, 123, 255));
+            btnNuevoArticulo.setIcon(cargarIcono("/icons/crear.png", 22, 22));
+            btnNuevoArticulo.setPreferredSize(new Dimension(45, 35));
+            btnNuevoArticulo.setToolTipText("Redactar Nuevo Artículo");
+
             btnNuevoArticulo.addActionListener(e -> {
                 NuevoArticuloFrame nuevoArticulo = new NuevoArticuloFrame(tokenUsuarioActual);
                 nuevoArticulo.setVisible(true);
@@ -306,7 +374,6 @@ public class WikiMainFrame extends JFrame {
     private void renderizarGrid(List<com.metroidwiki.model.ArticuloDTO> listaAMostrar) {
         gridTarjetas.removeAll();
 
-        // 🛠️ EL EMBUDO ESTRICTO: Solo artículos que su estado sea "Publicado" pasan a la pantalla
         List<com.metroidwiki.model.ArticuloDTO> publicados = listaAMostrar.stream()
                 .filter(a -> "Publicado".equalsIgnoreCase(a.getEstado()))
                 .collect(Collectors.toList());
@@ -395,9 +462,14 @@ public class WikiMainFrame extends JFrame {
         lblCategoria.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblCategoria.setForeground(textoGris);
 
-        JLabel lblVistas = new JLabel("👁 Vistas: " + articulo.getVistas());
+        // 🛠️ ICONO PERSONALIZADO DE VISTAS (El "Ojo")
+        JLabel lblVistas = new JLabel(" Vistas: " + articulo.getVistas());
         lblVistas.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblVistas.setForeground(acentoVerde);
+        ImageIcon vistaIcon = cargarIcono("/icons/vista.png", 16, 16);
+        if (vistaIcon != null) {
+            lblVistas.setIcon(vistaIcon);
+        }
 
         panelTextos.add(lblTitulo);
         panelTextos.add(Box.createRigidArea(new Dimension(0, 5)));
@@ -421,7 +493,7 @@ public class WikiMainFrame extends JFrame {
                         com.metroidwiki.model.ArticuloDTO artToOpen = articulo;
                         if (response.isSuccessful() && response.body() != null && response.body().getArticulo() != null) {
                             artToOpen = response.body().getArticulo();
-                            lblVistas.setText("👁 Vistas: " + artToOpen.getVistas());
+                            lblVistas.setText(" Vistas: " + artToOpen.getVistas());
                             for (int i = 0; i < listaArticulosCache.size(); i++) {
                                 if (listaArticulosCache.get(i).getId().equals(artToOpen.getId())) {
                                     listaArticulosCache.set(i, artToOpen);
