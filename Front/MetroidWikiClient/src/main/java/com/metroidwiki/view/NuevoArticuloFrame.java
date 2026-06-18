@@ -4,7 +4,6 @@ import com.metroidwiki.model.ArticuloRequest;
 import com.metroidwiki.model.ArticuloResponse;
 import com.metroidwiki.network.ArticuloClient;
 import com.metroidwiki.network.RetrofitClient;
-// 🛠️ IMPORTAMOS NUESTRO CLIENTE gRPC
 import com.metroidwiki.network.GrpcMediaClient;
 
 import retrofit2.Call;
@@ -14,7 +13,6 @@ import retrofit2.Response;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.plaf.basic.BasicComboBoxUI;
 import java.awt.*;
 import java.io.File;
 import javax.swing.SwingUtilities;
@@ -81,33 +79,8 @@ public class NuevoArticuloFrame extends JFrame {
 
         String[] categorias = {"Lore", "Items", "Enemigos", "Ubicaciones", "Personajes"};
         cmbCategoria = new JComboBox<>(categorias);
-        cmbCategoria.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        cmbCategoria.setBackground(panelSecundario);
-        cmbCategoria.setForeground(textoClaro);
+        estilizarComboBox(cmbCategoria); // 🛠️ APLICAMOS EL NUEVO ESTILIZADOR BLINDADO
         cmbCategoria.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        cmbCategoria.setUI(new BasicComboBoxUI());
-        cmbCategoria.setOpaque(true);
-        cmbCategoria.setRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
-                JLabel item = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
-                list.setBackground(panelSecundario);
-                list.setSelectionBackground(acentoVerde);
-                list.setSelectionForeground(Color.WHITE);
-
-                if (isSelected) {
-                    item.setBackground(acentoVerde);
-                    item.setForeground(Color.WHITE);
-                } else {
-                    item.setBackground(panelSecundario);
-                    item.setForeground(textoClaro);
-                }
-
-                item.setBorder(new EmptyBorder(5, 10, 5, 10));
-                return item;
-            }
-        });
 
         // Multimedia
         JLabel lblMultimedia = new JLabel("Archivo Multimedia:");
@@ -161,6 +134,7 @@ public class NuevoArticuloFrame extends JFrame {
         scrollContenido.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Añadir componentes en orden al contenedor
+        panelFormulario.removeAll();
         panelFormulario.add(lblTitulo); panelFormulario.add(Box.createRigidArea(new Dimension(0, 5)));
         panelFormulario.add(txtTitulo); panelFormulario.add(Box.createRigidArea(new Dimension(0, 15)));
 
@@ -227,6 +201,41 @@ public class NuevoArticuloFrame extends JFrame {
         area.setOpaque(true);
     }
 
+    // 🛠️ MÉTODO ESTILIZADOR CORREGIDO (Fondo Negro, Letras Verdes)
+    private void estilizarComboBox(JComboBox<String> combo) {
+        combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
+        combo.setBackground(Color.BLACK); // 🛠️ Fondo Negro absoluto
+        combo.setForeground(acentoVerde); // 🛠️ Letras Verdes
+        combo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        combo.setAlignmentX(Component.LEFT_ALIGNMENT);
+        combo.setOpaque(true);
+
+        // ⚠️ Se eliminó la línea "combo.setUI(new BasicComboBoxUI())" porque causaba el fondo blanco
+
+        combo.setRenderer(new DefaultListCellRenderer() {
+            @Override
+            public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
+                JLabel item = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
+                if (isSelected) {
+                    item.setBackground(acentoVerde);
+                    item.setForeground(Color.BLACK); // Texto negro al seleccionarlo
+                } else {
+                    item.setBackground(Color.BLACK);
+                    item.setForeground(acentoVerde);
+                }
+
+                if (index == -1) { // Cuando el menú está cerrado
+                    item.setBackground(Color.BLACK);
+                    item.setForeground(acentoVerde);
+                }
+
+                item.setBorder(new EmptyBorder(5, 10, 5, 10));
+                return item;
+            }
+        });
+    }
+
     private void abrirSelectorImagen() {
         JFileChooser selector = new JFileChooser();
         selector.setDialogTitle("Seleccionar archivo multimedia de la Wiki");
@@ -273,18 +282,14 @@ public class NuevoArticuloFrame extends JFrame {
 
                     if (response.isSuccessful() && response.body() != null && response.body().getArticulo() != null && response.body().getArticulo().getId() != null) {
 
-                        // 🛠️ 1. OBTENEMOS EL ID DEL ARTÍCULO CREADO (Asegúrate de que tu ArticuloResponse tenga getArticulo().getId())
-                        // Si tu modelo es distinto, ajústalo aquí para extraer el ID que devuelve Node.js
                         String idArticuloCreado = response.body().getArticulo().getId();
 
-                        // 🛠️ 2. DISPARAMOS gRPC SI HAY IMAGEN
                         if (archivoImagenSeleccionado != null && archivoImagenSeleccionado.exists()) {
                             try {
                                 GrpcMediaClient grpcClient = new GrpcMediaClient();
                                 grpcClient.subirImagenArticulo(idArticuloCreado, archivoImagenSeleccionado, new GrpcMediaClient.UploadListener() {
                                     @Override
                                     public void onSuccess(String urlImagen) {
-                                        System.out.println("gRPC upload completed: " + urlImagen);
                                         SwingUtilities.invokeLater(() -> {
                                             JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "¡Artículo guardado con imagen en la red!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                                             dispose();
@@ -293,7 +298,6 @@ public class NuevoArticuloFrame extends JFrame {
 
                                     @Override
                                     public void onError(Throwable t) {
-                                        System.err.println("Fallo al conectar con gRPC: " + t.getMessage());
                                         SwingUtilities.invokeLater(() -> {
                                             JOptionPane.showMessageDialog(NuevoArticuloFrame.this,
                                                     "Artículo guardado, pero no se pudo subir la imagen: " + t.getMessage(),
@@ -302,16 +306,13 @@ public class NuevoArticuloFrame extends JFrame {
                                         });
                                     }
                                 });
-                                System.out.println("Enviando foto a la velocidad de la luz...");
                             } catch (Exception ex) {
-                                System.err.println("Fallo al conectar con gRPC: " + ex.getMessage());
                                 JOptionPane.showMessageDialog(NuevoArticuloFrame.this,
                                         "Artículo guardado, pero error al conectar gRPC: " + ex.getMessage(),
                                         "Advertencia", JOptionPane.WARNING_MESSAGE);
                                 dispose();
                             }
                         } else {
-                            // Sin imagen, cerramos directamente
                             JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "¡Artículo guardado en la red con éxito!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                             dispose();
                         }

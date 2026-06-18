@@ -21,6 +21,8 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+// 🛠️ Importar Lector de SVG
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 
 public class AdminDashboardFrame extends JFrame {
 
@@ -31,7 +33,7 @@ public class AdminDashboardFrame extends JFrame {
     private final Color acentoVerde = new Color(76, 175, 80);
     private final Color acentoAmarillo = new Color(255, 193, 7);
     private final Color acentoRojo = new Color(244, 67, 54);
-    private final Color acentoGris = new Color(158, 158, 158); // NUEVO COLOR PARA ARCHIVADOS
+    private final Color acentoGris = new Color(158, 158, 158);
     private final Color textoClaro = new Color(230, 230, 230);
     private final Color textoGris = new Color(150, 150, 150);
 
@@ -41,7 +43,7 @@ public class AdminDashboardFrame extends JFrame {
     private JLabel lblTotalGlobal;
     private JLabel lblTotalPropios;
     private JLabel lblTotalBorradores;
-    private JLabel lblTotalArchivados; // NUEVO KPI
+    private JLabel lblTotalArchivados;
 
     private JTable tablaArticulos;
     private DefaultTableModel modeloTabla;
@@ -77,7 +79,20 @@ public class AdminDashboardFrame extends JFrame {
         add(panelCentral, BorderLayout.CENTER);
 
         actualizarContadoresKPI();
-        filtrarArticulosActivos(); // 🛠️ POR DEFECTO MOSTRAMOS SOLO LOS ACTIVOS
+        filtrarArticulosActivos();
+    }
+
+    // ==========================================
+    // 🛠️ HERRAMIENTA: CARGADOR DE ÍCONOS SVG
+    // ==========================================
+    private Icon cargarIcono(String ruta, int width, int height) {
+        try {
+            String rutaLimpia = ruta.startsWith("/") ? ruta.substring(1) : ruta;
+            return new FlatSVGIcon(rutaLimpia, width, height);
+        } catch (Exception e) {
+            System.err.println("❌ Error cargando SVG " + ruta + ": " + e.getMessage());
+            return null;
+        }
     }
 
     private JPanel crearCabeceraAdmin() {
@@ -100,7 +115,6 @@ public class AdminDashboardFrame extends JFrame {
     }
 
     private JPanel crearPanelKPIs() {
-        // 🛠️ Cambiamos a 4 columnas para que quepa la tarjeta de archivados
         JPanel panelKPIs = new JPanel(new GridLayout(1, 4, 20, 0));
         panelKPIs.setBackground(fondoPrincipal);
         panelKPIs.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
@@ -117,7 +131,6 @@ public class AdminDashboardFrame extends JFrame {
         lblTotalBorradores = (JLabel) cardBorradores.getClientProperty("labelValor");
         cardBorradores.addActionListener(e -> filtrarArticulosBorradores());
 
-        // 🛠️ NUEVA TARJETA DE ARCHIVADOS
         JButton cardArchivados = crearTarjetaBotonKPI("ARCHIVADOS", "0", acentoGris);
         lblTotalArchivados = (JLabel) cardArchivados.getClientProperty("labelValor");
         cardArchivados.addActionListener(e -> filtrarArticulosArchivados());
@@ -125,7 +138,7 @@ public class AdminDashboardFrame extends JFrame {
         panelKPIs.add(cardTotal);
         panelKPIs.add(cardPropios);
         panelKPIs.add(cardBorradores);
-        panelKPIs.add(cardArchivados); // Agregamos a la vista
+        panelKPIs.add(cardArchivados);
 
         return panelKPIs;
     }
@@ -152,23 +165,29 @@ public class AdminDashboardFrame extends JFrame {
                 new EmptyBorder(5, 10, 5, 10)
         ));
 
-        JButton btnBuscar = new JButton("Filtrar");
+        // 🛠️ BOTÓN BUSCAR (Texto modificado e Ícono inyectado)
+        JButton btnBuscar = new JButton("Buscar");
+        btnBuscar.setIcon(cargarIcono("/icons/buscar.svg", 18, 18));
+        btnBuscar.setIconTextGap(8); // Separación entre el icono y el texto
         btnBuscar.setBackground(acentoVerde);
         btnBuscar.setForeground(Color.WHITE);
         btnBuscar.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnBuscar.setFocusPainted(false);
         btnBuscar.setBorderPainted(false);
-        btnBuscar.setMaximumSize(new Dimension(100, 35));
+        btnBuscar.setMaximumSize(new Dimension(110, 35)); // Ampliado un poquito para el ícono
         btnBuscar.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnBuscar.addActionListener(e -> ejecutarBusqueda());
 
-        JButton btnRefrescar = new JButton("Actualizar Tabla");
+        // 🛠️ BOTÓN REFRESCAR (Texto acortado e Ícono inyectado)
+        JButton btnRefrescar = new JButton("Actualizar");
+        btnRefrescar.setIcon(cargarIcono("/icons/actualizar.svg", 18, 18));
+        btnRefrescar.setIconTextGap(8);
         btnRefrescar.setBackground(new Color(33, 150, 243));
         btnRefrescar.setForeground(Color.WHITE);
         btnRefrescar.setFont(new Font("Segoe UI", Font.BOLD, 13));
         btnRefrescar.setFocusPainted(false);
         btnRefrescar.setBorderPainted(false);
-        btnRefrescar.setMaximumSize(new Dimension(150, 35));
+        btnRefrescar.setMaximumSize(new Dimension(130, 35)); // Ajustado para el ícono
         btnRefrescar.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnRefrescar.addActionListener(e -> refrescarTablaServidor());
 
@@ -250,10 +269,10 @@ public class AdminDashboardFrame extends JFrame {
             tablaArticulos.getColumnModel().getColumn(i).setCellRenderer(renderCelda);
         }
 
-        tablaArticulos.getColumnModel().getColumn(5).setCellRenderer(new BotonSimpleRenderer("Editar"));
-        tablaArticulos.getColumnModel().getColumn(6).setCellRenderer(new BotonSimpleRenderer("Archivar"));
-        tablaArticulos.getColumnModel().getColumn(5).setPreferredWidth(80);
-        tablaArticulos.getColumnModel().getColumn(6).setPreferredWidth(80);
+        tablaArticulos.getColumnModel().getColumn(5).setCellRenderer(new BotonIconoRenderer("Editar"));
+        tablaArticulos.getColumnModel().getColumn(6).setCellRenderer(new BotonIconoRenderer("Archivar"));
+        tablaArticulos.getColumnModel().getColumn(5).setPreferredWidth(60);
+        tablaArticulos.getColumnModel().getColumn(6).setPreferredWidth(60);
 
         tablaArticulos.addMouseListener(new MouseAdapter() {
             @Override
@@ -270,16 +289,16 @@ public class AdminDashboardFrame extends JFrame {
                             .orElse(null);
 
                     if (articuloSeleccionado != null) {
-                        if (col == 5) { // Clic en Editar
+                        if (col == 5) {
                             EditarArticuloFrame editor = new EditarArticuloFrame(tokenUsuarioActual, articuloSeleccionado, AdminDashboardFrame.this);
                             editor.setVisible(true);
 
-                        } else if (col == 6) { // 🛠️ CLIC EN ARCHIVAR (Soft Delete)
+                        } else if (col == 6) {
                             int confirmar = JOptionPane.showConfirmDialog(AdminDashboardFrame.this,
                                     "¿Estás seguro de que deseas archivar este artículo?\nDejará de ser visible para los usuarios de la Wiki.",
                                     "Confirmar Archivado", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
                             if(confirmar == JOptionPane.YES_OPTION) {
-                                ejecutarArchivadoREST(articuloSeleccionado); // Mandamos la petición al servidor
+                                ejecutarArchivadoREST(articuloSeleccionado);
                             }
                         }
                     }
@@ -295,18 +314,16 @@ public class AdminDashboardFrame extends JFrame {
         return panelTablaContenedor;
     }
 
-    // 🛠️ MÉTODO PARA MANDAR LA ACTUALIZACIÓN DE ESTADO A NODE.JS
     private void ejecutarArchivadoREST(ArticuloDTO articulo) {
         try {
             ArticuloClient client = RetrofitClient.getClient().create(ArticuloClient.class);
 
-            // Creamos un Request idéntico al artículo, pero forzando el estado "Archivado"
             ArticuloRequest request = new ArticuloRequest(
                     articulo.getTitulo(),
                     articulo.getCategoria(),
                     articulo.getDescripcion(),
                     articulo.getContenido(),
-                    null, // No mandamos imagen nueva
+                    null,
                     "Archivado"
             );
 
@@ -317,7 +334,7 @@ public class AdminDashboardFrame extends JFrame {
                 public void onResponse(Call<ArticuloResponse> call, Response<ArticuloResponse> response) {
                     if (response.isSuccessful()) {
                         JOptionPane.showMessageDialog(AdminDashboardFrame.this, "Artículo archivado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                        refrescarTablaServidor(); // Recargamos para que desaparezca de la vista actual
+                        refrescarTablaServidor();
                     } else {
                         JOptionPane.showMessageDialog(AdminDashboardFrame.this, "Error del servidor: " + response.code(), "Error", JOptionPane.ERROR_MESSAGE);
                     }
@@ -334,7 +351,6 @@ public class AdminDashboardFrame extends JFrame {
     }
 
     private void actualizarContadoresKPI() {
-        // 🛠️ Los Activos son todos los que NO están archivados
         long activos = listaArticulosCache.stream()
                 .filter(a -> !"Archivado".equalsIgnoreCase(a.getEstado()))
                 .count();
@@ -366,13 +382,12 @@ public class AdminDashboardFrame extends JFrame {
                     art.getCategoria(),
                     art.getAutor() != null ? art.getAutor() : "Desconocido",
                     art.getEstado(),
-                    "[ EDITAR ]",
-                    "[ ARCHIVAR ]"
+                    "",
+                    ""
             });
         }
     }
 
-    // 🛠️ NUEVOS FILTROS SEPARADOS POR ESTADO
     private void filtrarArticulosActivos() {
         List<ArticuloDTO> activos = listaArticulosCache.stream()
                 .filter(a -> !"Archivado".equalsIgnoreCase(a.getEstado()))
@@ -404,9 +419,8 @@ public class AdminDashboardFrame extends JFrame {
     private void ejecutarBusqueda() {
         String query = txtBuscador.getText().trim().toLowerCase();
 
-        // 🛠️ Al buscar, forzamos que no muestre los archivados (a menos que se hayan filtrado específicamente)
         List<ArticuloDTO> filtrados = listaArticulosCache.stream()
-                .filter(a -> !"Archivado".equalsIgnoreCase(a.getEstado())) // Excluir archivados en búsquedas normales
+                .filter(a -> !"Archivado".equalsIgnoreCase(a.getEstado()))
                 .filter(a -> a.getTitulo().toLowerCase().contains(query))
                 .collect(Collectors.toList());
         renderizarTabla(filtrados);
@@ -436,28 +450,39 @@ public class AdminDashboardFrame extends JFrame {
         return botonCard;
     }
 
-    class BotonSimpleRenderer extends DefaultTableCellRenderer {
+    class BotonIconoRenderer extends DefaultTableCellRenderer {
         private String tipo;
-        public BotonSimpleRenderer(String tipo) {
+        private Icon iconoEditar;
+        private Icon iconoArchivar;
+
+        public BotonIconoRenderer(String tipo) {
             this.tipo = tipo;
             setHorizontalAlignment(SwingConstants.CENTER);
+            iconoEditar = cargarIcono("/icons/editar.svg", 24, 24);
+            iconoArchivar = cargarIcono("/icons/archivar.svg", 24, 24);
         }
 
         @Override
         public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
-            Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
-            setBorder(noFocusBorder);
-            if (isSelected) c.setBackground(new Color(55, 55, 60)); else c.setBackground(panelSecundario);
+            JLabel lbl = (JLabel) super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+            lbl.setBorder(noFocusBorder);
+            lbl.setText("");
 
-            setFont(new Font("Segoe UI", Font.BOLD, 12));
-            if (tipo.equals("Editar")) {
-                c.setForeground(new Color(33, 150, 243)); // Azul
-                setText("[ EDITAR ]");
+            if (isSelected) {
+                lbl.setBackground(new Color(55, 55, 60));
             } else {
-                c.setForeground(new Color(200, 100, 50)); // Naranja de Archivo
-                setText("[ ARCHIVAR ]");
+                lbl.setBackground(panelSecundario);
             }
-            return c;
+
+            if (tipo.equals("Editar")) {
+                lbl.setIcon(iconoEditar);
+                lbl.setToolTipText("Editar Artículo");
+            } else {
+                lbl.setIcon(iconoArchivar);
+                lbl.setToolTipText("Archivar Artículo");
+            }
+
+            return lbl;
         }
     }
 
@@ -470,8 +495,6 @@ public class AdminDashboardFrame extends JFrame {
                     if (response.isSuccessful() && response.body() != null) {
                         listaArticulosCache = response.body().getArticulos();
                         actualizarContadoresKPI();
-
-                        // 🛠️ Al refrescar, volvemos a mostrar solo los activos
                         filtrarArticulosActivos();
                     }
                 }

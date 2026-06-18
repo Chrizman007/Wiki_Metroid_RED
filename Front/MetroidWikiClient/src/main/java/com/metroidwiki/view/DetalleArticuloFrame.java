@@ -16,6 +16,7 @@ import java.net.URL;
 import java.util.Base64;
 import javax.imageio.ImageIO;
 import java.util.List;
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 
 public class DetalleArticuloFrame extends JFrame {
 
@@ -78,6 +79,19 @@ public class DetalleArticuloFrame extends JFrame {
         cargarComentarios();
     }
 
+    // ==========================================
+    // 🛠️ HERRAMIENTA: CARGADOR DE ÍCONOS VECTORIALES (SVG)
+    // ==========================================
+    private Icon cargarIcono(String ruta, int width, int height) {
+        try {
+            String rutaLimpia = ruta.startsWith("/") ? ruta.substring(1) : ruta;
+            return new FlatSVGIcon(rutaLimpia, width, height);
+        } catch (Exception e) {
+            System.err.println("❌ Error cargando SVG " + ruta + ": " + e.getMessage());
+            return null;
+        }
+    }
+
     private JPanel crearHeaderArticulo() {
         JPanel panelHeader = new JPanel(new BorderLayout());
         panelHeader.setBackground(fondoPrincipal);
@@ -105,9 +119,14 @@ public class DetalleArticuloFrame extends JFrame {
         JPanel panelDerecho = new JPanel(new GridBagLayout());
         panelDerecho.setBackground(fondoPrincipal);
 
-        JLabel lblVistas = new JLabel("👁️ " + articulo.getVistas() + " Vistas");
+        // 🛠️ INYECCIÓN DEL ÍCONO SVG DE VISTAS
+        JLabel lblVistas = new JLabel(" " + articulo.getVistas() + " Vistas");
         lblVistas.setFont(new Font("Segoe UI", Font.BOLD, 15));
         lblVistas.setForeground(acentoVerde);
+        Icon vistaIcon = cargarIcono("/icons/vista.svg", 22, 22);
+        if (vistaIcon != null) {
+            lblVistas.setIcon(vistaIcon);
+        }
         panelDerecho.add(lblVistas);
 
         JSeparator lineaDivisoria = new JSeparator();
@@ -263,13 +282,16 @@ public class DetalleArticuloFrame extends JFrame {
         lblContador.setForeground(textoGris);
         lblContador.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        JButton btnComentar = new JButton("ENVIAR");
-        btnComentar.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        // 🛠️ INYECCIÓN DEL ÍCONO SVG DE ENVIAR (Y le quitamos el texto)
+        JButton btnComentar = new JButton("");
+        btnComentar.setIcon(cargarIcono("/icons/enviar.svg", 22, 22));
+        btnComentar.setToolTipText("Enviar transmisión"); // Mensaje al dejar el mouse encima
         btnComentar.setBackground(acentoVerde);
-        btnComentar.setForeground(Color.WHITE);
         btnComentar.setFocusPainted(false);
         btnComentar.setBorderPainted(false);
         btnComentar.setAlignmentX(Component.RIGHT_ALIGNMENT);
+        btnComentar.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        btnComentar.setBorder(new EmptyBorder(8, 15, 8, 15)); // Un poco de margen para que se vea bien como botón
 
         txtNuevoComentario.addKeyListener(new java.awt.event.KeyAdapter() {
             public void keyReleased(java.awt.event.KeyEvent evt) {
@@ -355,7 +377,6 @@ public class DetalleArticuloFrame extends JFrame {
             panelComentariosContenedor.add(lblSinComentarios);
         } else {
             for (ComentarioDTO comentario : comentarios) {
-                // 🛠️ Le pasamos el objeto comentario completo para poder sacar su ID si lo queremos borrar
                 panelComentariosContenedor.add(crearGloboComentario(comentario, obtenerNombreAutor(comentario)));
                 panelComentariosContenedor.add(Box.createRigidArea(new Dimension(0, 8)));
             }
@@ -373,7 +394,6 @@ public class DetalleArticuloFrame extends JFrame {
         globo.setBorder(new EmptyBorder(10, 15, 10, 15));
         globo.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        // 🛠️ HEADER DEL COMENTARIO (Usuario a la izquierda, Botón a la derecha)
         JPanel panelHeaderComentario = new JPanel(new BorderLayout());
         panelHeaderComentario.setBackground(panelSecundario);
         panelHeaderComentario.setAlignmentX(Component.LEFT_ALIGNMENT);
@@ -384,23 +404,20 @@ public class DetalleArticuloFrame extends JFrame {
         lblUser.setForeground(acentoVerde);
         panelHeaderComentario.add(lblUser, BorderLayout.WEST);
 
-        // 🛠️ REGLA DE NEGOCIO: Mostrar botón borrar SOLO si es administrador
         if ("administrador".equalsIgnoreCase(rolUsuarioActual)) {
             JButton btnBorrar = new JButton("X");
-            btnBorrar.setFont(new Font("Segoe UI", Font.BOLD, 12)); // Letra un poco más grande
+            btnBorrar.setFont(new Font("Segoe UI", Font.BOLD, 12));
             btnBorrar.setBackground(acentoRojo);
             btnBorrar.setForeground(Color.WHITE);
 
-            // 🛠️ LOS 3 ESCUDOS DE JAVA SWING PARA BOTONES PLANOS
             btnBorrar.setFocusPainted(false);
-            btnBorrar.setBorderPainted(false); // Le quita el borde 3D del Sistema Operativo
-            btnBorrar.setOpaque(true);         // Fuerza a que se pinte tu rojo intenso
+            btnBorrar.setBorderPainted(false);
+            btnBorrar.setOpaque(true);
 
-            btnBorrar.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8)); // Un poco más de ancho
+            btnBorrar.setBorder(BorderFactory.createEmptyBorder(2, 8, 2, 8));
             btnBorrar.setCursor(new Cursor(Cursor.HAND_CURSOR));
             btnBorrar.setToolTipText("Eliminar transmisión (Moderar)");
 
-            // Evento para eliminar
             btnBorrar.addActionListener(e -> borrarComentarioREST(comentario.getId()));
 
             panelHeaderComentario.add(btnBorrar, BorderLayout.EAST);
@@ -433,7 +450,6 @@ public class DetalleArticuloFrame extends JFrame {
                 ComentarioClient client = RetrofitClient.getClient().create(ComentarioClient.class);
                 String bearerToken = "Bearer " + tokenUsuario;
 
-                // ⚠️ NECESITAS AGREGAR EL MÉTODO eliminarComentario EN TU INTERFAZ Retrofit
                 client.eliminarComentario(idComentario, bearerToken).enqueue(new Callback<Void>() {
                     @Override
                     public void onResponse(Call<Void> call, Response<Void> response) {
@@ -468,8 +484,8 @@ public class DetalleArticuloFrame extends JFrame {
             return;
         }
 
+        // 🛠️ Ahora solo desactivamos el botón (Se pondrá gris automáticamente) en lugar de cambiarle el texto
         btnEnviar.setEnabled(false);
-        btnEnviar.setText("ENVIANDO...");
 
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
             @Override
@@ -495,8 +511,8 @@ public class DetalleArticuloFrame extends JFrame {
 
             @Override
             protected void done() {
+                // 🛠️ Volvemos a habilitar el botón cuando termine de procesar
                 btnEnviar.setEnabled(true);
-                btnEnviar.setText("ENVIAR");
 
                 try {
                     get();
@@ -526,7 +542,6 @@ public class DetalleArticuloFrame extends JFrame {
         return "Anónimo";
     }
 
-    // 🛠️ FUNCIÓN GENERALIZADA PARA EXTRAER CUALQUIER DATO DEL JWT (id o rol)
     private String extraerDatoDesdeToken(String token, String keyBuscada) {
         if (token == null || token.isEmpty()) return null;
         try {

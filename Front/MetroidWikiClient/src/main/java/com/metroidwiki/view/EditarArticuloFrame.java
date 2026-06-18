@@ -14,7 +14,6 @@ import retrofit2.Response;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
-import javax.swing.plaf.basic.BasicComboBoxUI;
 import java.awt.*;
 import java.io.File;
 
@@ -29,7 +28,7 @@ public class EditarArticuloFrame extends JFrame {
 
     private JTextField txtTitulo;
     private JComboBox<String> cmbCategoria;
-    private JComboBox<String> cmbEstado; // 🛠️ NUEVO CAMPO DE ESTADO
+    private JComboBox<String> cmbEstado;
     private JTextArea txtDescripcion;
     private JTextArea txtContenido;
     private JTextField txtRutaImagen;
@@ -47,7 +46,7 @@ public class EditarArticuloFrame extends JFrame {
         this.dashboardAdmin = dashboardAdmin;
 
         setTitle("Modificar Artículo - " + articuloActual.getTitulo());
-        setSize(650, 800); // un poco más alto para acomodar el nuevo campo
+        setSize(650, 800);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(fondoPrincipal);
@@ -56,7 +55,7 @@ public class EditarArticuloFrame extends JFrame {
         // --- CABECERA ---
         JLabel lblTituloVentana = new JLabel("EDICIÓN DE REGISTRO CLASIFICADO", SwingConstants.CENTER);
         lblTituloVentana.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        lblTituloVentana.setForeground(acentoAmarillo); // Amarillo para denotar "Edición"
+        lblTituloVentana.setForeground(acentoAmarillo);
         lblTituloVentana.setBorder(new EmptyBorder(15, 0, 10, 0));
         add(lblTituloVentana, BorderLayout.NORTH);
 
@@ -81,16 +80,16 @@ public class EditarArticuloFrame extends JFrame {
         lblCategoria.setFont(fuenteLabel);
         String[] categorias = {"Lore", "Items", "Enemigos", "Ubicaciones", "Personajes"};
         cmbCategoria = new JComboBox<>(categorias);
-        estilizarComboBox(cmbCategoria);
+        estilizarComboBox(cmbCategoria); // 🛠️ APLICADO AQUÍ
         cmbCategoria.setSelectedItem(articuloActual.getCategoria());
 
-        // 🛠️ ESTADO (NUEVO)
+        // ESTADO
         JLabel lblEstado = new JLabel("Estado de Publicación:");
         lblEstado.setForeground(textoClaro);
         lblEstado.setFont(fuenteLabel);
         String[] estados = {"EnBorrador", "EnRevision", "Publicado", "Archivado"};
         cmbEstado = new JComboBox<>(estados);
-        estilizarComboBox(cmbEstado);
+        estilizarComboBox(cmbEstado); // 🛠️ APLICADO AQUÍ
         cmbEstado.setSelectedItem(articuloActual.getEstado() != null ? articuloActual.getEstado() : "EnBorrador");
 
         // Multimedia
@@ -164,7 +163,7 @@ public class EditarArticuloFrame extends JFrame {
         btnGuardar = new JButton("ACTUALIZAR ARTÍCULO");
         btnGuardar.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnGuardar.setBackground(acentoAmarillo);
-        btnGuardar.setForeground(fondoPrincipal); // Letra oscura para contrastar con amarillo
+        btnGuardar.setForeground(fondoPrincipal);
         btnGuardar.setPreferredSize(new Dimension(220, 40));
         btnGuardar.setFocusPainted(false);
         btnGuardar.setBorderPainted(false);
@@ -203,23 +202,35 @@ public class EditarArticuloFrame extends JFrame {
         area.setAlignmentX(Component.LEFT_ALIGNMENT);
     }
 
+    // 🛠️ MÉTODO ESTILIZADOR CORREGIDO (Fondo Negro, Letras Verdes)
     private void estilizarComboBox(JComboBox<String> combo) {
         combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        combo.setBackground(panelSecundario);
-        combo.setForeground(textoClaro);
+        combo.setBackground(Color.BLACK); // 🛠️ Fondo Negro absoluto
+        combo.setForeground(acentoVerde); // 🛠️ Letras Verdes
+        combo.setFont(new Font("Segoe UI", Font.BOLD, 14));
         combo.setAlignmentX(Component.LEFT_ALIGNMENT);
-        combo.setUI(new BasicComboBoxUI());
+        combo.setOpaque(true);
+
+        // ⚠️ Se eliminó la línea "combo.setUI(new BasicComboBoxUI())"
+
         combo.setRenderer(new DefaultListCellRenderer() {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index, boolean isSelected, boolean cellHasFocus) {
                 JLabel item = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+
                 if (isSelected) {
                     item.setBackground(acentoVerde);
-                    item.setForeground(Color.WHITE);
+                    item.setForeground(Color.BLACK); // Texto negro al seleccionarlo
                 } else {
-                    item.setBackground(panelSecundario);
-                    item.setForeground(textoClaro);
+                    item.setBackground(Color.BLACK);
+                    item.setForeground(acentoVerde);
                 }
+
+                if (index == -1) {
+                    item.setBackground(Color.BLACK);
+                    item.setForeground(acentoVerde);
+                }
+
                 item.setBorder(new EmptyBorder(5, 10, 5, 10));
                 return item;
             }
@@ -242,7 +253,7 @@ public class EditarArticuloFrame extends JFrame {
     private void enviarActualizacion() {
         String titulo = txtTitulo.getText();
         String categoria = cmbCategoria.getSelectedItem().toString();
-        String estado = cmbEstado.getSelectedItem().toString(); // 🛠️ CAPTURAMOS ESTADO
+        String estado = cmbEstado.getSelectedItem().toString();
         String descripcion = txtDescripcion.getText();
         String contenido = txtContenido.getText();
 
@@ -256,29 +267,21 @@ public class EditarArticuloFrame extends JFrame {
 
         try {
             ArticuloClient client = RetrofitClient.getClient().create(ArticuloClient.class);
-
-            // 🛠️ USAMOS EL NUEVO CONSTRUCTOR DE 6 PARÁMETROS QUE CREAMOS
             ArticuloRequest request = new ArticuloRequest(titulo, categoria, descripcion, contenido, null, estado);
-
             String bearerToken = "Bearer " + tokenJwt;
 
             client.actualizarArticulo(bearerToken, articuloActual.getId(), request).enqueue(new Callback<ArticuloResponse>() {
                 @Override
                 public void onResponse(Call<ArticuloResponse> call, Response<ArticuloResponse> response) {
                     if (response.isSuccessful()) {
-
-                        // 🛠️ ¡LA MAGIA DE SINCRONIZACIÓN!
-                        // Le decimos a la ventana de administración (si existe) que se refresque sola
                         if (dashboardAdmin != null) {
                             dashboardAdmin.refrescarTablaServidor();
                         }
-
-                        // Si eligió una imagen NUEVA, disparamos gRPC
                         if (archivoImagenSeleccionado != null && archivoImagenSeleccionado.exists()) {
                             subirNuevaImagenGrpc(articuloActual.getId());
                         } else {
                             JOptionPane.showMessageDialog(EditarArticuloFrame.this, "¡Artículo actualizado con éxito!", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                            dispose(); // Cerramos la ventana de edición
+                            dispose();
                         }
                     } else {
                         btnGuardar.setEnabled(true);

@@ -5,22 +5,38 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="76729f87-e3b1-46f5-89c0-37e6991e75e2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/actualizar.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/admin.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/archivar.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/categorias.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/editar.png" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/logo.jpg" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/.gitignore" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/misc.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/misc.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/ComentarioClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/ComentarioClient.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/exception/ErrorConsumoAPIException.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DevConsoleFrame.java" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/actualizar.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/admin.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/archivar.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/buscar.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/categorias.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/crear.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/destaca.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/dev.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/editar.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/enviar.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/nuevos.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/salir.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/vista.svg" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/AdminDashboardFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/AdminDashboardFrame.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DetalleArticuloFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DetalleArticuloFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/EditarArticuloFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/EditarArticuloFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/NuevoArticuloFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/NuevoArticuloFrame.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/WikiMainFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/WikiMainFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/crear.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/icons/crear.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/destaca.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/icons/destaca.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/nuevos.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/icons/nuevos.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/salir.png" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/resources/icons/salir.png" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../api/v1/servicios/comentarios/src/negocios/ComentarioService.js" beforeDir="false" afterPath="$PROJECT_DIR$/../../api/v1/servicios/comentarios/src/negocios/ComentarioService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/actualizar.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/admin.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/archivar.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/categorias.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/crear.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/destaca.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/editar.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/logo.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/nuevos.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/salir.png" beforeDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -29,6 +45,13 @@
   </component>
   <component name="EmbeddingIndexingInfo">
     <option name="cachedIndexableFilesCount" value="51" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Class" />
+      </list>
+    </option>
   </component>
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
@@ -79,7 +102,7 @@
       <option name="presentableId" value="Default" />
       <updated>1781675773850</updated>
       <workItem from="1781675776459" duration="1812000" />
-      <workItem from="1781730101461" duration="680000" />
+      <workItem from="1781730101461" duration="9043000" />
     </task>
     <servers />
   </component>

@@ -9,6 +9,7 @@ import javax.imageio.ImageIO;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import com.formdev.flatlaf.extras.FlatSVGIcon;
 
 public class WikiMainFrame extends JFrame {
 
@@ -56,48 +57,16 @@ public class WikiMainFrame extends JFrame {
     }
 
     // ==========================================
-    // 🛠️ HERRAMIENTA: CARGADOR DE ÍCONOS ULTRA-HD
+    // 🛠️ HERRAMIENTA: CARGADOR DE ÍCONOS VECTORIALES (SVG)
     // ==========================================
-    private ImageIcon cargarIcono(String ruta, int width, int height) {
+    private Icon cargarIcono(String ruta, int width, int height) {
         try {
-            URL imgUrl = getClass().getResource(ruta);
-            if (imgUrl != null) {
-                // 1. Leemos la imagen original
-                Image imgOriginal = ImageIO.read(imgUrl);
-
-                // 2. Creamos un lienzo compatible con la pantalla actual (Mejora los colores)
-                GraphicsEnvironment env = GraphicsEnvironment.getLocalGraphicsEnvironment();
-                GraphicsDevice device = env.getDefaultScreenDevice();
-                GraphicsConfiguration config = device.getDefaultConfiguration();
-
-                // Creamos una imagen optimizada para tu tarjeta gráfica
-                java.awt.image.BufferedImage imgRedimensionada = config.createCompatibleImage(width, height, java.awt.Transparency.TRANSLUCENT);
-
-                // 3. Invocamos al motor de renderizado 2D más pesado de Java
-                Graphics2D g2d = imgRedimensionada.createGraphics();
-
-                // 🚀 COMBO DEFINITIVO DE ANTIALIASING:
-                // Bilinear suele ser más limpio que Bicúbico para íconos pequeños de interfaz
-                g2d.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-                g2d.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
-                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                // Text text-antialiasing por si tu ícono tiene letras incrustadas
-                g2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
-                // Mejora la precisión de las curvas finas
-                g2d.setRenderingHint(RenderingHints.KEY_FRACTIONALMETRICS, RenderingHints.VALUE_FRACTIONALMETRICS_ON);
-
-                // 4. Dibujamos
-                g2d.drawImage(imgOriginal, 0, 0, width, height, null);
-                g2d.dispose();
-
-                return new ImageIcon(imgRedimensionada);
-            } else {
-                System.err.println("⚠️ No se encontró la imagen en resources: " + ruta);
-            }
+            String rutaLimpia = ruta.startsWith("/") ? ruta.substring(1) : ruta;
+            return new FlatSVGIcon(rutaLimpia, width, height);
         } catch (Exception e) {
-            System.err.println("❌ Error cargando icono " + ruta + ": " + e.getMessage());
+            System.err.println("❌ Error cargando SVG " + ruta + ": " + e.getMessage());
+            return null;
         }
-        return null;
     }
 
     // ==========================================
@@ -108,43 +77,41 @@ public class WikiMainFrame extends JFrame {
         panelLateral = new JPanel();
         panelLateral.setLayout(new BoxLayout(panelLateral, BoxLayout.Y_AXIS));
         panelLateral.setBackground(fondoLateral);
-        panelLateral.setPreferredSize(new Dimension(240, 0));
-        panelLateral.setBorder(new EmptyBorder(20, 10, 10, 20));
 
-        // 🛠️ LOGO PERSONALIZADO
-        JLabel lblLogo = new JLabel();
-        ImageIcon logoIcon = cargarIcono("/icons/logo.jpg", 180, 80);
-        if (logoIcon != null) {
-            lblLogo.setIcon(logoIcon);
-        } else {
-            lblLogo.setText("METROID WIKI");
-            lblLogo.setFont(new Font("Segoe UI", Font.BOLD, 20));
-            lblLogo.setForeground(Color.WHITE);
-        }
+        // 🛠️ ANCHO REDUCIDO A 240px (Para no invadir las tarjetas)
+        panelLateral.setPreferredSize(new Dimension(240, 0));
+        panelLateral.setBorder(new EmptyBorder(25, 10, 10, 10));
+
+        // 🛠️ EFECTO ESPECIAL HTML PARA EL LOGO (Estilo Interfaz Sci-Fi)
+        String textoLogoHtml = "<html><div style='text-align: center;'>" +
+                "<span style='color: #4CAF50; font-family: Impact, sans-serif; font-size: 26px; font-style: italic;'>METROID</span><br>" +
+                "<span style='color: #CCCCCC; font-family: \"Segoe UI\", sans-serif; font-size: 14px; letter-spacing: 4px;'>W I K I</span>" +
+                "</div></html>";
+        JLabel lblLogo = new JLabel(textoLogoHtml, SwingConstants.CENTER);
         lblLogo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
-        JSeparator separador = new JSeparator();
-        separador.setMaximumSize(new Dimension(200, 1));
-        separador.setForeground(acentoVerde);
-        separador.setBackground(acentoVerde);
+        JSeparator separadorPrincipal = new JSeparator();
+        separadorPrincipal.setMaximumSize(new Dimension(200, 1));
+        separadorPrincipal.setForeground(acentoVerde);
+        separadorPrincipal.setBackground(acentoVerde);
 
-        // --- BOTONES CON ÍCONOS INYECTADOS ---
+        // --- CREACIÓN DE BOTONES (Equilibrio de tamaño 24x24 y fuente 15) ---
         JButton btnInicio = crearBotonMenu("Inicio (Todos)", true);
         btnInicio.addActionListener(e -> renderizarGrid(listaArticulosCache));
 
         JButton btnDestacados = crearBotonMenu("Destacados", false);
-        btnDestacados.setIcon(cargarIcono("/icons/destaca.png", 20, 20));
-        btnDestacados.setIconTextGap(10);
+        btnDestacados.setIcon(cargarIcono("/icons/destaca.svg", 24, 24));
+        btnDestacados.setIconTextGap(12);
         btnDestacados.addActionListener(e -> filtrarDestacados());
 
         JButton btnNuevasEntradas = crearBotonMenu("Nuevas Entradas", false);
-        btnNuevasEntradas.setIcon(cargarIcono("/icons/nuevos.png", 20, 20));
-        btnNuevasEntradas.setIconTextGap(10);
+        btnNuevasEntradas.setIcon(cargarIcono("/icons/nuevos.svg", 24, 24));
+        btnNuevasEntradas.setIconTextGap(12);
         btnNuevasEntradas.addActionListener(e -> filtrarNuevasEntradas());
 
         JButton btnMenuCategorias = crearBotonMenu("Categorías ▼", false);
-        btnMenuCategorias.setIcon(cargarIcono("/icons/categorias.png", 20, 20));
-        btnMenuCategorias.setIconTextGap(10);
+        btnMenuCategorias.setIcon(cargarIcono("/icons/categorias.svg", 24, 24));
+        btnMenuCategorias.setIconTextGap(12);
         crearPanelCategoriasColapsable();
 
         btnMenuCategorias.addActionListener(e -> {
@@ -155,40 +122,74 @@ public class WikiMainFrame extends JFrame {
             panelLateral.repaint();
         });
 
+        // 🛠️ BOTÓN DE ADMINISTRACIÓN
         JButton btnAdministracion = crearBotonMenu("Administración", false);
-        btnAdministracion.setIcon(cargarIcono("/icons/admin.png", 20, 20));
-        btnAdministracion.setIconTextGap(10);
+        btnAdministracion.setIcon(cargarIcono("/icons/admin.svg", 24, 24));
+        btnAdministracion.setIconTextGap(12);
         btnAdministracion.setForeground(new Color(255, 193, 7));
-
         btnAdministracion.addActionListener(e -> {
-            AdminDashboardFrame dashboard = new AdminDashboardFrame(
-                    tokenUsuarioActual,
-                    nombreUsuario,
-                    listaArticulosCache
-            );
+            AdminDashboardFrame dashboard = new AdminDashboardFrame(tokenUsuarioActual, nombreUsuario, listaArticulosCache);
             dashboard.setVisible(true);
         });
 
+        // 🛠️ CONSOLA DE DESARROLLADOR (Con su nuevo ícono dev.svg)
+        JButton btnConsolaDev = crearBotonMenu("Terminal API", false);
+        btnConsolaDev.setIcon(cargarIcono("/icons/dev.svg", 24, 24));
+        btnConsolaDev.setIconTextGap(12);
+        btnConsolaDev.setForeground(new Color(0, 255, 150));
+        btnConsolaDev.addActionListener(e -> {
+            DevConsoleFrame consola = new DevConsoleFrame(tokenUsuarioActual);
+            consola.setVisible(true);
+        });
+
+        // 🛠️ BOTÓN SALIR
         JButton btnCerrarSesion = crearBotonMenu("Cerrar Sesión", false);
-        btnCerrarSesion.setIcon(cargarIcono("/icons/salir.png", 20, 20));
-        btnCerrarSesion.setIconTextGap(10);
+        btnCerrarSesion.setIcon(cargarIcono("/icons/salir.svg", 24, 24));
+        btnCerrarSesion.setIconTextGap(12);
         btnCerrarSesion.setForeground(new Color(255, 100, 100));
         btnCerrarSesion.addActionListener(e -> {
             new LoginFrame().setVisible(true);
             dispose();
         });
 
-        // --- ENSAMBLAJE LATERAL ---
+        // --- ENSAMBLAJE LATERAL CON SEPARACIÓN ESTRICTA ---
+        panelLateral.add(Box.createRigidArea(new Dimension(0, 10)));
         panelLateral.add(lblLogo);
-        panelLateral.add(Box.createRigidArea(new Dimension(0, 15)));
-        panelLateral.add(separador);
+        panelLateral.add(Box.createRigidArea(new Dimension(0, 20)));
+        panelLateral.add(separadorPrincipal);
         panelLateral.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        if (rolUsuario.equals("administrador") || rolUsuario.equals("desarrollador")) {
-            panelLateral.add(btnAdministracion);
-            panelLateral.add(Box.createRigidArea(new Dimension(0, 10)));
+        // 🛡️ BLOQUE "VIP": Solo roles privilegiados van arriba
+        boolean tienePrivilegios = false;
+
+        if (rolUsuario.equals("desarrollador")) {
+            panelLateral.add(btnConsolaDev);
+            panelLateral.add(Box.createRigidArea(new Dimension(0, 5)));
+            tienePrivilegios = true;
         }
 
+        if (rolUsuario.equals("administrador")) {
+            panelLateral.add(btnAdministracion);
+            panelLateral.add(Box.createRigidArea(new Dimension(0, 5)));
+            tienePrivilegios = true;
+        }
+
+        // Si es un rol privilegiado, ponemos una línea tenue para separarlos de los filtros normales
+        if (tienePrivilegios) {
+            JSeparator separadorSecundario = new JSeparator();
+            separadorSecundario.setMaximumSize(new Dimension(180, 1));
+            separadorSecundario.setForeground(panelSecundario);
+            separadorSecundario.setBackground(panelSecundario);
+
+            panelLateral.add(Box.createRigidArea(new Dimension(0, 10)));
+            panelLateral.add(separadorSecundario);
+            panelLateral.add(Box.createRigidArea(new Dimension(0, 25))); // Más aire antes de "Inicio"
+        } else {
+            // Si es un lector normal, le damos un espacio en blanco generoso debajo del logo
+            panelLateral.add(Box.createRigidArea(new Dimension(0, 25)));
+        }
+
+        // 📚 BLOQUE "FILTROS NORMALES": Para todos los usuarios
         panelLateral.add(btnInicio);
         panelLateral.add(Box.createRigidArea(new Dimension(0, 10)));
         panelLateral.add(btnDestacados);
@@ -198,6 +199,7 @@ public class WikiMainFrame extends JFrame {
         panelLateral.add(btnMenuCategorias);
         panelLateral.add(panelCategorias);
 
+        // Empujamos el botón de salir hasta abajo
         panelLateral.add(Box.createVerticalGlue());
         panelLateral.add(btnCerrarSesion);
 
@@ -214,8 +216,8 @@ public class WikiMainFrame extends JFrame {
         String[] categorias = {"Lore", "Items", "Enemigos", "Ubicaciones", "Personajes"};
         for (String cat : categorias) {
             JButton btnCat = crearBotonMenu("• " + cat, false);
-            btnCat.setFont(new Font("Segoe UI", Font.PLAIN, 13));
-            btnCat.setPreferredSize(new Dimension(200, 30));
+            btnCat.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            btnCat.setPreferredSize(new Dimension(200, 35));
             btnCat.addActionListener(e -> filtrarPorCategoria(cat));
             panelCategorias.add(btnCat);
             panelCategorias.add(Box.createRigidArea(new Dimension(0, 5)));
@@ -278,6 +280,7 @@ public class WikiMainFrame extends JFrame {
         });
 
         JButton btnBuscar = crearBotonAccion("Buscar", acentoVerde);
+        btnBuscar.setIcon(cargarIcono("/icons/buscar.svg",22,22));
 
         btnBuscar.addActionListener(e -> {
             String query = txtBuscador.getText().trim().toLowerCase();
@@ -292,21 +295,19 @@ public class WikiMainFrame extends JFrame {
             }
         });
 
-        // 🛠️ BOTÓN DE REFRESCAR (SOLO ÍCONO)
         JButton btnRefrescar = crearBotonAccion("", panelSecundario);
-        btnRefrescar.setIcon(cargarIcono("/icons/actualizar.png", 22, 22)); // <-- Cambia el nombre si usaste otro
+        btnRefrescar.setIcon(cargarIcono("/icons/actualizar.svg", 22, 22));
         btnRefrescar.setPreferredSize(new Dimension(45, 35));
-        btnRefrescar.setToolTipText("Refrescar Bóveda de Artículos"); // Para que el usuario sepa qué hace
+        btnRefrescar.setToolTipText("Refrescar Bóveda de Artículos");
         btnRefrescar.addActionListener(e -> cargarArticulosDesdeRed());
 
         panelHerramientas.add(txtBuscador);
         panelHerramientas.add(btnBuscar);
         panelHerramientas.add(btnRefrescar);
 
-        if (rolUsuario.equals("administrador") || rolUsuario.equals("desarrollador")) {
-            // 🛠️ BOTÓN NUEVO ARTÍCULO (SOLO ÍCONO)
+        if (rolUsuario.equals("administrador")) {
             JButton btnNuevoArticulo = crearBotonAccion("", new Color(0, 123, 255));
-            btnNuevoArticulo.setIcon(cargarIcono("/icons/crear.png", 22, 22));
+            btnNuevoArticulo.setIcon(cargarIcono("/icons/crear.svg", 22, 22));
             btnNuevoArticulo.setPreferredSize(new Dimension(45, 35));
             btnNuevoArticulo.setToolTipText("Redactar Nuevo Artículo");
 
@@ -462,11 +463,10 @@ public class WikiMainFrame extends JFrame {
         lblCategoria.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblCategoria.setForeground(textoGris);
 
-        // 🛠️ ICONO PERSONALIZADO DE VISTAS (El "Ojo")
         JLabel lblVistas = new JLabel(" Vistas: " + articulo.getVistas());
         lblVistas.setFont(new Font("Segoe UI", Font.PLAIN, 12));
         lblVistas.setForeground(acentoVerde);
-        ImageIcon vistaIcon = cargarIcono("/icons/vista.png", 16, 16);
+        Icon vistaIcon = cargarIcono("/icons/vista.svg", 16, 16);
         if (vistaIcon != null) {
             lblVistas.setIcon(vistaIcon);
         }
@@ -576,8 +576,10 @@ public class WikiMainFrame extends JFrame {
 
     private JButton crearBotonMenu(String texto, boolean activo) {
         JButton boton = new JButton(texto);
-        boton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        boton.setFont(new Font("Segoe UI", activo ? Font.BOLD : Font.PLAIN, 14));
+        // 🛠️ ALTURA AJUSTADA A 50 (Robusto pero no gigante)
+        boton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
+        // 🛠️ FUENTE AJUSTADA A 15
+        boton.setFont(new Font("Segoe UI", activo ? Font.BOLD : Font.PLAIN, 15));
         boton.setForeground(activo ? Color.WHITE : textoGris);
         boton.setBackground(activo ? acentoVerde : fondoLateral);
         boton.setFocusPainted(false);
@@ -585,6 +587,7 @@ public class WikiMainFrame extends JFrame {
         boton.setOpaque(true);
         boton.setHorizontalAlignment(SwingConstants.LEFT);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
+        // 🛠️ PADDING AJUSTADO para que nada se corte
         boton.setBorder(new EmptyBorder(0, 15, 0, 0));
         return boton;
     }
@@ -600,5 +603,4 @@ public class WikiMainFrame extends JFrame {
         boton.setPreferredSize(new Dimension(130, 35));
         return boton;
     }
-
 }
