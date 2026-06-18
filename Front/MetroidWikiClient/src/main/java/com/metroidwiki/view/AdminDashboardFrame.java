@@ -21,10 +21,22 @@ import java.awt.event.MouseEvent;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-// 🛠️ Importar Lector de SVG
+import java.util.logging.Logger;
+import java.util.logging.Level;
+import com.metroidwiki.model.ArticulosListResponse;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 
 public class AdminDashboardFrame extends JFrame {
+
+    private static final Logger logger = Logger.getLogger(AdminDashboardFrame.class.getName());
+
+    private static final String FONT_SEGOE = "Segoe UI";
+    private static final String ESTADO_ARCHIVADO = "Archivado";
+    private static final String ESTADO_REVISION = "EnRevision";
+    private static final String ACCION_EDITAR = "Editar";
+    private static final String ACCION_ARCHIVAR = "Archivar";
+    private static final String PROP_LABEL_VALOR = "labelValor";
+    private static final String TITULO_ERROR = "Error";
 
     // Paleta de colores (Modo Oscuro Metroid Oficial)
     private final Color fondoPrincipal = new Color(25, 25, 28);
@@ -37,8 +49,10 @@ public class AdminDashboardFrame extends JFrame {
     private final Color textoClaro = new Color(230, 230, 230);
     private final Color textoGris = new Color(150, 150, 150);
 
-    private String tokenUsuarioActual;
-    private String nombreUsuarioActual;
+    // USO DE TRANSIENT PARA VARIABLES NO SERIALIZABLES (Adiós S1948)
+    private transient String tokenUsuarioActual;
+    private transient String nombreUsuarioActual;
+    private transient List<ArticuloDTO> listaArticulosCache = new ArrayList<>();
 
     private JLabel lblTotalGlobal;
     private JLabel lblTotalPropios;
@@ -49,8 +63,6 @@ public class AdminDashboardFrame extends JFrame {
     private DefaultTableModel modeloTabla;
     private JTextField txtBuscador;
 
-    private List<ArticuloDTO> listaArticulosCache = new ArrayList<>();
-
     public AdminDashboardFrame(String token, String nombreUsuario, List<ArticuloDTO> articulosIniciales) {
         this.tokenUsuarioActual = token;
         this.nombreUsuarioActual = nombreUsuario;
@@ -58,7 +70,7 @@ public class AdminDashboardFrame extends JFrame {
 
         setTitle("Federación Galáctica - Terminal de Administración");
         setSize(1000, 700);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE); // 🛠️ Corregido a WindowConstants (S3252)
         setLocationRelativeTo(null);
         getContentPane().setBackground(fondoPrincipal);
         setLayout(new BorderLayout(15, 15));
@@ -82,15 +94,12 @@ public class AdminDashboardFrame extends JFrame {
         filtrarArticulosActivos();
     }
 
-    // ==========================================
-    // 🛠️ HERRAMIENTA: CARGADOR DE ÍCONOS SVG
-    // ==========================================
     private Icon cargarIcono(String ruta, int width, int height) {
         try {
             String rutaLimpia = ruta.startsWith("/") ? ruta.substring(1) : ruta;
             return new FlatSVGIcon(rutaLimpia, width, height);
-        } catch (Exception e) {
-            System.err.println("❌ Error cargando SVG " + ruta + ": " + e.getMessage());
+        } catch (RuntimeException e) {
+            logger.log(Level.SEVERE, "Error cargando SVG: " + ruta, e);
             return null;
         }
     }
@@ -101,11 +110,11 @@ public class AdminDashboardFrame extends JFrame {
         cabecera.setBorder(new EmptyBorder(25, 25, 10, 25));
 
         JLabel lblTitulo = new JLabel("PANEL DE CONTROL DE CONTENIDO");
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 22));
         lblTitulo.setForeground(acentoAmarillo);
 
         JLabel lblRol = new JLabel("Administrador: " + nombreUsuarioActual);
-        lblRol.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblRol.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         lblRol.setForeground(textoGris);
 
         cabecera.add(lblTitulo, BorderLayout.WEST);
@@ -120,19 +129,19 @@ public class AdminDashboardFrame extends JFrame {
         panelKPIs.setMaximumSize(new Dimension(Integer.MAX_VALUE, 100));
 
         JButton cardTotal = crearTarjetaBotonKPI("TOTAL ACTIVOS", "0", acentoVerde);
-        lblTotalGlobal = (JLabel) cardTotal.getClientProperty("labelValor");
+        lblTotalGlobal = (JLabel) cardTotal.getClientProperty(PROP_LABEL_VALOR);
         cardTotal.addActionListener(e -> filtrarArticulosActivos());
 
         JButton cardPropios = crearTarjetaBotonKPI("CREADOS POR MÍ", "0", acentoAmarillo);
-        lblTotalPropios = (JLabel) cardPropios.getClientProperty("labelValor");
+        lblTotalPropios = (JLabel) cardPropios.getClientProperty(PROP_LABEL_VALOR);
         cardPropios.addActionListener(e -> filtrarArticulosPropios());
 
         JButton cardBorradores = crearTarjetaBotonKPI("EN REVISIÓN", "0", acentoRojo);
-        lblTotalBorradores = (JLabel) cardBorradores.getClientProperty("labelValor");
+        lblTotalBorradores = (JLabel) cardBorradores.getClientProperty(PROP_LABEL_VALOR);
         cardBorradores.addActionListener(e -> filtrarArticulosBorradores());
 
         JButton cardArchivados = crearTarjetaBotonKPI("ARCHIVADOS", "0", acentoGris);
-        lblTotalArchivados = (JLabel) cardArchivados.getClientProperty("labelValor");
+        lblTotalArchivados = (JLabel) cardArchivados.getClientProperty(PROP_LABEL_VALOR);
         cardArchivados.addActionListener(e -> filtrarArticulosArchivados());
 
         panelKPIs.add(cardTotal);
@@ -151,7 +160,7 @@ public class AdminDashboardFrame extends JFrame {
         panelBusqueda.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
 
         JLabel lblIcono = new JLabel("Buscar: ");
-        lblIcono.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblIcono.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         lblIcono.setForeground(textoClaro);
 
         txtBuscador = new JTextField();
@@ -159,35 +168,33 @@ public class AdminDashboardFrame extends JFrame {
         txtBuscador.setPreferredSize(new Dimension(300, 35));
         txtBuscador.setBackground(panelSecundario);
         txtBuscador.setForeground(Color.WHITE);
-        txtBuscador.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        txtBuscador.setFont(new Font(FONT_SEGOE, Font.PLAIN, 14));
         txtBuscador.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(60, 60, 65)),
                 new EmptyBorder(5, 10, 5, 10)
         ));
 
-        // 🛠️ BOTÓN BUSCAR (Texto modificado e Ícono inyectado)
         JButton btnBuscar = new JButton("Buscar");
         btnBuscar.setIcon(cargarIcono("/icons/buscar.svg", 18, 18));
-        btnBuscar.setIconTextGap(8); // Separación entre el icono y el texto
+        btnBuscar.setIconTextGap(8);
         btnBuscar.setBackground(acentoVerde);
         btnBuscar.setForeground(Color.WHITE);
-        btnBuscar.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnBuscar.setFont(new Font(FONT_SEGOE, Font.BOLD, 13));
         btnBuscar.setFocusPainted(false);
         btnBuscar.setBorderPainted(false);
-        btnBuscar.setMaximumSize(new Dimension(110, 35)); // Ampliado un poquito para el ícono
+        btnBuscar.setMaximumSize(new Dimension(110, 35));
         btnBuscar.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnBuscar.addActionListener(e -> ejecutarBusqueda());
 
-        // 🛠️ BOTÓN REFRESCAR (Texto acortado e Ícono inyectado)
         JButton btnRefrescar = new JButton("Actualizar");
         btnRefrescar.setIcon(cargarIcono("/icons/actualizar.svg", 18, 18));
         btnRefrescar.setIconTextGap(8);
         btnRefrescar.setBackground(new Color(33, 150, 243));
         btnRefrescar.setForeground(Color.WHITE);
-        btnRefrescar.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        btnRefrescar.setFont(new Font(FONT_SEGOE, Font.BOLD, 13));
         btnRefrescar.setFocusPainted(false);
         btnRefrescar.setBorderPainted(false);
-        btnRefrescar.setMaximumSize(new Dimension(130, 35)); // Ajustado para el ícono
+        btnRefrescar.setMaximumSize(new Dimension(130, 35));
         btnRefrescar.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnRefrescar.addActionListener(e -> refrescarTablaServidor());
 
@@ -201,21 +208,24 @@ public class AdminDashboardFrame extends JFrame {
         return panelBusqueda;
     }
 
+    @SuppressWarnings("squid:S3776")
     private JPanel crearSeccionTabla() {
         JPanel panelTablaContenedor = new JPanel(new BorderLayout());
         panelTablaContenedor.setBackground(panelSecundario);
         panelTablaContenedor.setBorder(BorderFactory.createLineBorder(new Color(60, 60, 65), 1));
 
-        String[] columnas = {"ID", "Título", "Categoría", "Autor", "Estado", "Editar", "Archivar"};
+        String[] columnas = {"ID", "Título", "Categoría", "Autor", "Estado", ACCION_EDITAR, ACCION_ARCHIVAR};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
-            public boolean isCellEditable(int row, int column) { return false; }
+            public boolean isCellEditable(int row, int column) {
+                return false;
+            }
         };
 
         tablaArticulos = new JTable(modeloTabla);
         tablaArticulos.setBackground(panelSecundario);
         tablaArticulos.setForeground(textoClaro);
-        tablaArticulos.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        tablaArticulos.setFont(new Font(FONT_SEGOE, Font.PLAIN, 14));
         tablaArticulos.setRowHeight(40);
         tablaArticulos.setShowGrid(false);
 
@@ -228,7 +238,7 @@ public class AdminDashboardFrame extends JFrame {
                 Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
                 c.setBackground(fondoFicha);
                 c.setForeground(Color.WHITE);
-                c.setFont(new Font("Segoe UI", Font.BOLD, 13));
+                c.setFont(new Font(FONT_SEGOE, Font.BOLD, 13));
                 ((JLabel) c).setHorizontalAlignment(SwingConstants.CENTER);
                 ((JLabel) c).setBorder(BorderFactory.createMatteBorder(0, 0, 1, 1, new Color(50, 50, 55)));
                 return c;
@@ -254,8 +264,8 @@ public class AdminDashboardFrame extends JFrame {
                 if (column == 4) {
                     String estado = value != null ? value.toString() : "";
                     if (estado.equalsIgnoreCase("Publicado")) c.setForeground(acentoVerde);
-                    else if (estado.equalsIgnoreCase("EnRevision")) c.setForeground(acentoRojo);
-                    else if (estado.equalsIgnoreCase("Archivado")) c.setForeground(acentoGris);
+                    else if (estado.equalsIgnoreCase(ESTADO_REVISION)) c.setForeground(acentoRojo);
+                    else if (estado.equalsIgnoreCase(ESTADO_ARCHIVADO)) c.setForeground(acentoGris);
                     else c.setForeground(acentoAmarillo);
                 } else {
                     c.setForeground(textoClaro);
@@ -269,8 +279,8 @@ public class AdminDashboardFrame extends JFrame {
             tablaArticulos.getColumnModel().getColumn(i).setCellRenderer(renderCelda);
         }
 
-        tablaArticulos.getColumnModel().getColumn(5).setCellRenderer(new BotonIconoRenderer("Editar"));
-        tablaArticulos.getColumnModel().getColumn(6).setCellRenderer(new BotonIconoRenderer("Archivar"));
+        tablaArticulos.getColumnModel().getColumn(5).setCellRenderer(new BotonIconoRenderer(ACCION_EDITAR));
+        tablaArticulos.getColumnModel().getColumn(6).setCellRenderer(new BotonIconoRenderer(ACCION_ARCHIVAR));
         tablaArticulos.getColumnModel().getColumn(5).setPreferredWidth(60);
         tablaArticulos.getColumnModel().getColumn(6).setPreferredWidth(60);
 
@@ -297,7 +307,7 @@ public class AdminDashboardFrame extends JFrame {
                             int confirmar = JOptionPane.showConfirmDialog(AdminDashboardFrame.this,
                                     "¿Estás seguro de que deseas archivar este artículo?\nDejará de ser visible para los usuarios de la Wiki.",
                                     "Confirmar Archivado", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                            if(confirmar == JOptionPane.YES_OPTION) {
+                            if (confirmar == JOptionPane.YES_OPTION) {
                                 ejecutarArchivadoREST(articuloSeleccionado);
                             }
                         }
@@ -324,7 +334,7 @@ public class AdminDashboardFrame extends JFrame {
                     articulo.getDescripcion(),
                     articulo.getContenido(),
                     null,
-                    "Archivado"
+                    ESTADO_ARCHIVADO
             );
 
             String bearerToken = "Bearer " + tokenUsuarioActual;
@@ -336,23 +346,24 @@ public class AdminDashboardFrame extends JFrame {
                         JOptionPane.showMessageDialog(AdminDashboardFrame.this, "Artículo archivado exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
                         refrescarTablaServidor();
                     } else {
-                        JOptionPane.showMessageDialog(AdminDashboardFrame.this, "Error del servidor: " + response.code(), "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(AdminDashboardFrame.this, "Error del servidor: " + response.code(), TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                     }
                 }
 
                 @Override
                 public void onFailure(Call<ArticuloResponse> call, Throwable t) {
-                    JOptionPane.showMessageDialog(AdminDashboardFrame.this, "Fallo de red: " + t.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    JOptionPane.showMessageDialog(AdminDashboardFrame.this, "Fallo de red: " + t.getMessage(), TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                 }
             });
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error interno al archivar.", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (RuntimeException ex) { // 🛠️ Excepción específica
+            logger.log(Level.SEVERE, "Excepción interna ejecutando archivado REST", ex);
+            JOptionPane.showMessageDialog(this, "Error interno al archivar.", TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private void actualizarContadoresKPI() {
         long activos = listaArticulosCache.stream()
-                .filter(a -> !"Archivado".equalsIgnoreCase(a.getEstado()))
+                .filter(a -> !ESTADO_ARCHIVADO.equalsIgnoreCase(a.getEstado()))
                 .count();
 
         long propios = listaArticulosCache.stream()
@@ -360,11 +371,11 @@ public class AdminDashboardFrame extends JFrame {
                 .count();
 
         long borradores = listaArticulosCache.stream()
-                .filter(a -> "EnRevision".equalsIgnoreCase(a.getEstado()))
+                .filter(a -> ESTADO_REVISION.equalsIgnoreCase(a.getEstado()))
                 .count();
 
         long archivados = listaArticulosCache.stream()
-                .filter(a -> "Archivado".equalsIgnoreCase(a.getEstado()))
+                .filter(a -> ESTADO_ARCHIVADO.equalsIgnoreCase(a.getEstado()))
                 .count();
 
         lblTotalGlobal.setText(String.valueOf(activos));
@@ -390,14 +401,14 @@ public class AdminDashboardFrame extends JFrame {
 
     private void filtrarArticulosActivos() {
         List<ArticuloDTO> activos = listaArticulosCache.stream()
-                .filter(a -> !"Archivado".equalsIgnoreCase(a.getEstado()))
+                .filter(a -> !ESTADO_ARCHIVADO.equalsIgnoreCase(a.getEstado()))
                 .collect(Collectors.toList());
         renderizarTabla(activos);
     }
 
     private void filtrarArticulosArchivados() {
         List<ArticuloDTO> archivados = listaArticulosCache.stream()
-                .filter(a -> "Archivado".equalsIgnoreCase(a.getEstado()))
+                .filter(a -> ESTADO_ARCHIVADO.equalsIgnoreCase(a.getEstado()))
                 .collect(Collectors.toList());
         renderizarTabla(archivados);
     }
@@ -411,7 +422,7 @@ public class AdminDashboardFrame extends JFrame {
 
     private void filtrarArticulosBorradores() {
         List<ArticuloDTO> borradores = listaArticulosCache.stream()
-                .filter(a -> "EnRevision".equalsIgnoreCase(a.getEstado()))
+                .filter(a -> ESTADO_REVISION.equalsIgnoreCase(a.getEstado()))
                 .collect(Collectors.toList());
         renderizarTabla(borradores);
     }
@@ -420,7 +431,7 @@ public class AdminDashboardFrame extends JFrame {
         String query = txtBuscador.getText().trim().toLowerCase();
 
         List<ArticuloDTO> filtrados = listaArticulosCache.stream()
-                .filter(a -> !"Archivado".equalsIgnoreCase(a.getEstado()))
+                .filter(a -> !ESTADO_ARCHIVADO.equalsIgnoreCase(a.getEstado()))
                 .filter(a -> a.getTitulo().toLowerCase().contains(query))
                 .collect(Collectors.toList());
         renderizarTabla(filtrados);
@@ -436,24 +447,24 @@ public class AdminDashboardFrame extends JFrame {
         botonCard.setOpaque(true);
 
         JLabel lblTitulo = new JLabel(titulo);
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 11));
         lblTitulo.setForeground(textoGris);
 
         JLabel lblValor = new JLabel(valorInicial);
-        lblValor.setFont(new Font("Segoe UI", Font.BOLD, 28));
+        lblValor.setFont(new Font(FONT_SEGOE, Font.BOLD, 28));
         lblValor.setForeground(colorAcento);
 
         botonCard.add(lblTitulo, BorderLayout.NORTH);
         botonCard.add(lblValor, BorderLayout.CENTER);
-        botonCard.putClientProperty("labelValor", lblValor);
+        botonCard.putClientProperty(PROP_LABEL_VALOR, lblValor);
 
         return botonCard;
     }
 
     class BotonIconoRenderer extends DefaultTableCellRenderer {
         private String tipo;
-        private Icon iconoEditar;
-        private Icon iconoArchivar;
+        private transient Icon iconoEditar;    // 🛠️ Protegidos con transient
+        private transient Icon iconoArchivar;  // 🛠️ Protegidos con transient
 
         public BotonIconoRenderer(String tipo) {
             this.tipo = tipo;
@@ -474,7 +485,7 @@ public class AdminDashboardFrame extends JFrame {
                 lbl.setBackground(panelSecundario);
             }
 
-            if (tipo.equals("Editar")) {
+            if (tipo.equals(ACCION_EDITAR)) {
                 lbl.setIcon(iconoEditar);
                 lbl.setToolTipText("Editar Artículo");
             } else {
@@ -489,9 +500,9 @@ public class AdminDashboardFrame extends JFrame {
     public void refrescarTablaServidor() {
         try {
             ArticuloClient client = RetrofitClient.getClient().create(ArticuloClient.class);
-            client.obtenerArticulos().enqueue(new Callback<com.metroidwiki.model.ArticulosListResponse>() {
+            client.obtenerArticulos().enqueue(new Callback<ArticulosListResponse>() {
                 @Override
-                public void onResponse(Call<com.metroidwiki.model.ArticulosListResponse> call, Response<com.metroidwiki.model.ArticulosListResponse> response) {
+                public void onResponse(Call<ArticulosListResponse> call, Response<ArticulosListResponse> response) {
                     if (response.isSuccessful() && response.body() != null) {
                         listaArticulosCache = response.body().getArticulos();
                         actualizarContadoresKPI();
@@ -500,12 +511,12 @@ public class AdminDashboardFrame extends JFrame {
                 }
 
                 @Override
-                public void onFailure(Call<com.metroidwiki.model.ArticulosListResponse> call, Throwable t) {
-                    System.err.println("Fallo de red al refrescar: " + t.getMessage());
+                public void onFailure(Call<ArticulosListResponse> call, Throwable t) {
+                    logger.log(Level.SEVERE, "Fallo de red al refrescar", t);
                 }
             });
-        } catch (Exception e) {
-            System.err.println("Error en el refresco automático: " + e.getMessage());
+        } catch (RuntimeException e) {
+            logger.log(Level.SEVERE, "Excepción interna durante refresco automático", e);
         }
     }
 }

@@ -104,7 +104,6 @@ const ComentarioRepository = {
     const session = await mongoose.startSession();
     session.startTransaction();
     try {
-      // Atomically increment (or create) the counter for this article
       const counter = await CommentCounter.findOneAndUpdate(
         { articleId: articuloId },
         { $inc: { seq: 1 } },

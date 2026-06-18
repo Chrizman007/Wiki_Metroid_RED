@@ -5,38 +5,20 @@
   </component>
   <component name="ChangeListManager">
     <list default="true" id="76729f87-e3b1-46f5-89c0-37e6991e75e2" name="Changes" comment="">
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/exception/ErrorConsumoAPIException.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DevConsoleFrame.java" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/actualizar.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/admin.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/archivar.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/buscar.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/categorias.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/crear.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/destaca.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/dev.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/editar.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/enviar.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/nuevos.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/salir.svg" afterDir="false" />
-      <change afterPath="$PROJECT_DIR$/src/main/resources/icons/vista.svg" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/pom.xml" beforeDir="false" afterPath="$PROJECT_DIR$/pom.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ComentarioResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ComentarioResponse.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ComentariosListResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ComentariosListResponse.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/AdminDashboardFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/AdminDashboardFrame.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DetalleArticuloFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DetalleArticuloFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DevConsoleFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DevConsoleFrame.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/EditarArticuloFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/EditarArticuloFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/LoginFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/LoginFrame.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/NuevoArticuloFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/NuevoArticuloFrame.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/RegistroFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/RegistroFrame.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/WikiMainFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/WikiMainFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/actualizar.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/admin.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/archivar.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/categorias.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/crear.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/destaca.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/editar.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/logo.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/nuevos.png" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/resources/icons/salir.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../api/v1/servicios/articulos/src/negocios/ArticuloService.js" beforeDir="false" afterPath="$PROJECT_DIR$/../../api/v1/servicios/articulos/src/negocios/ArticuloService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../api/v1/servicios/comentarios/src/negocios/ComentarioService.js" beforeDir="false" afterPath="$PROJECT_DIR$/../../api/v1/servicios/comentarios/src/negocios/ComentarioService.js" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../api/v1/servicios/usuarios/src/negocios/UsuarioService.js" beforeDir="false" afterPath="$PROJECT_DIR$/../../api/v1/servicios/usuarios/src/negocios/UsuarioService.js" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -44,7 +26,7 @@
     <option name="LAST_RESOLUTION" value="IGNORE" />
   </component>
   <component name="EmbeddingIndexingInfo">
-    <option name="cachedIndexableFilesCount" value="51" />
+    <option name="cachedIndexableFilesCount" value="56" />
   </component>
   <component name="FileTemplateManagerImpl">
     <option name="RECENT_TEMPLATES">
@@ -60,6 +42,9 @@
     <commands />
     <urls />
   </component>
+  <component name="ProblemsViewState">
+    <option name="selectedTabId" value="CurrentFile" />
+  </component>
   <component name="ProjectColorInfo">{
   &quot;customColor&quot;: &quot;&quot;,
   &quot;associatedIndex&quot;: 6
@@ -69,26 +54,27 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent"><![CDATA[{
-  "keyToString": {
-    "Application.LoginFrame.executor": "Run",
-    "ModuleVcsDetector.initialDetectionPerformed": "true",
-    "RunOnceActivity.MCP Project settings loaded": "true",
-    "RunOnceActivity.ShowReadmeOnStart": "true",
-    "RunOnceActivity.git.unshallow": "true",
-    "RunOnceActivity.typescript.service.memoryLimit.init": "true",
-    "codeWithMe.voiceChat.enabledByDefault": "false",
-    "git-widget-placeholder": "main",
-    "kotlin-language-version-configured": "true",
-    "last_opened_file_path": "C:/Users/chris/OneDrive/Documentos/GITS/Wiki_Metroid_RED/Front/MetroidWikiClient/src/main/resources/icons",
-    "node.js.detected.package.eslint": "true",
-    "node.js.detected.package.tslint": "true",
-    "node.js.selected.package.eslint": "(autodetect)",
-    "node.js.selected.package.tslint": "(autodetect)",
-    "nodejs_package_manager_path": "npm",
-    "vue.rearranger.settings.migration": "true"
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;Application.LoginFrame.executor&quot;: &quot;Run&quot;,
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.MCP Project settings loaded&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.typescript.service.memoryLimit.init&quot;: &quot;true&quot;,
+    &quot;codeWithMe.voiceChat.enabledByDefault&quot;: &quot;false&quot;,
+    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;C:/Users/chris/OneDrive/Documentos/GITS/Wiki_Metroid_RED/Front/MetroidWikiClient/src/main/resources/icons&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;preferences.pluginManager&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
   }
-}]]></component>
+}</component>
   <component name="RecentsManager">
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\chris\OneDrive\Documentos\GITS\Wiki_Metroid_RED\Front\MetroidWikiClient\src\main\resources\icons" />
@@ -102,7 +88,11 @@
       <option name="presentableId" value="Default" />
       <updated>1781675773850</updated>
       <workItem from="1781675776459" duration="1812000" />
-      <workItem from="1781730101461" duration="9043000" />
+      <workItem from="1781730101461" duration="9453000" />
+      <workItem from="1781749422653" duration="2561000" />
+      <workItem from="1781762546952" duration="361000" />
+      <workItem from="1781762930415" duration="2127000" />
+      <workItem from="1781814031873" duration="9609000" />
     </task>
     <servers />
   </component>

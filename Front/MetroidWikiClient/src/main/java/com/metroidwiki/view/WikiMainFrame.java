@@ -5,13 +5,21 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.net.URL;
-import javax.imageio.ImageIO;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.logging.Logger;
+import java.util.logging.Level;
+import java.util.concurrent.ExecutionException;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 
 public class WikiMainFrame extends JFrame {
+
+    private static final Logger logger = Logger.getLogger(WikiMainFrame.class.getName());
+
+    //CONSTANTES DE CLEAN CODE
+    private static final String FONT_SEGOE = "Segoe UI";
+    private static final String TXT_BUSCAR_WIKI = "Buscar en la Wiki...";
 
     // Paleta de colores (Modo Oscuro Metroid)
     private final Color fondoPrincipal = new Color(25, 25, 28);
@@ -21,16 +29,17 @@ public class WikiMainFrame extends JFrame {
     private final Color textoClaro = new Color(230, 230, 230);
     private final Color textoGris = new Color(150, 150, 150);
 
-    private String tokenUsuarioActual;
-    private String nombreUsuario;
-    private String rolUsuario;
+    //VARIABLES TRANSIENT PARA OBJETOS NO SERIALIZABLES
+    private transient String tokenUsuarioActual;
+    private transient String nombreUsuario;
+    private transient String rolUsuario;
 
-    private JPanel gridTarjetas;
-    private JPanel panelCategorias;
-    private JPanel panelLateral;
+    private transient JPanel gridTarjetas;
+    private transient JPanel panelCategorias;
+    private transient JPanel panelLateral;
 
     // Memoria caché para no pedir a la BD cada vez que filtramos
-    private List<com.metroidwiki.model.ArticuloDTO> listaArticulosCache = new ArrayList<>();
+    private transient List<com.metroidwiki.model.ArticuloDTO> listaArticulosCache = new ArrayList<>();
 
     public WikiMainFrame(String token, String nombreUsuario, String rolUsuario) {
         this.tokenUsuarioActual = token;
@@ -39,7 +48,7 @@ public class WikiMainFrame extends JFrame {
 
         setTitle("Metroid Wiki - Archivos Centrales");
         setSize(1100, 750);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE); // 🛠️ Corregido WindowConstants
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
@@ -56,15 +65,12 @@ public class WikiMainFrame extends JFrame {
         add(panelContenido, BorderLayout.CENTER);
     }
 
-    // ==========================================
-    // 🛠️ HERRAMIENTA: CARGADOR DE ÍCONOS VECTORIALES (SVG)
-    // ==========================================
     private Icon cargarIcono(String ruta, int width, int height) {
         try {
             String rutaLimpia = ruta.startsWith("/") ? ruta.substring(1) : ruta;
             return new FlatSVGIcon(rutaLimpia, width, height);
-        } catch (Exception e) {
-            System.err.println("❌ Error cargando SVG " + ruta + ": " + e.getMessage());
+        } catch (RuntimeException e) { // 🛠️ Excepción específica
+            logger.log(Level.SEVERE, "❌ Error cargando SVG " + ruta, e);
             return null;
         }
     }
@@ -78,11 +84,9 @@ public class WikiMainFrame extends JFrame {
         panelLateral.setLayout(new BoxLayout(panelLateral, BoxLayout.Y_AXIS));
         panelLateral.setBackground(fondoLateral);
 
-        // 🛠️ ANCHO REDUCIDO A 240px (Para no invadir las tarjetas)
         panelLateral.setPreferredSize(new Dimension(240, 0));
         panelLateral.setBorder(new EmptyBorder(25, 10, 10, 10));
 
-        // 🛠️ EFECTO ESPECIAL HTML PARA EL LOGO (Estilo Interfaz Sci-Fi)
         String textoLogoHtml = "<html><div style='text-align: center;'>" +
                 "<span style='color: #4CAF50; font-family: Impact, sans-serif; font-size: 26px; font-style: italic;'>METROID</span><br>" +
                 "<span style='color: #CCCCCC; font-family: \"Segoe UI\", sans-serif; font-size: 14px; letter-spacing: 4px;'>W I K I</span>" +
@@ -95,7 +99,6 @@ public class WikiMainFrame extends JFrame {
         separadorPrincipal.setForeground(acentoVerde);
         separadorPrincipal.setBackground(acentoVerde);
 
-        // --- CREACIÓN DE BOTONES (Equilibrio de tamaño 24x24 y fuente 15) ---
         JButton btnInicio = crearBotonMenu("Inicio (Todos)", true);
         btnInicio.addActionListener(e -> renderizarGrid(listaArticulosCache));
 
@@ -122,7 +125,6 @@ public class WikiMainFrame extends JFrame {
             panelLateral.repaint();
         });
 
-        // 🛠️ BOTÓN DE ADMINISTRACIÓN
         JButton btnAdministracion = crearBotonMenu("Administración", false);
         btnAdministracion.setIcon(cargarIcono("/icons/admin.svg", 24, 24));
         btnAdministracion.setIconTextGap(12);
@@ -132,7 +134,6 @@ public class WikiMainFrame extends JFrame {
             dashboard.setVisible(true);
         });
 
-        // 🛠️ CONSOLA DE DESARROLLADOR (Con su nuevo ícono dev.svg)
         JButton btnConsolaDev = crearBotonMenu("Terminal API", false);
         btnConsolaDev.setIcon(cargarIcono("/icons/dev.svg", 24, 24));
         btnConsolaDev.setIconTextGap(12);
@@ -142,7 +143,6 @@ public class WikiMainFrame extends JFrame {
             consola.setVisible(true);
         });
 
-        // 🛠️ BOTÓN SALIR
         JButton btnCerrarSesion = crearBotonMenu("Cerrar Sesión", false);
         btnCerrarSesion.setIcon(cargarIcono("/icons/salir.svg", 24, 24));
         btnCerrarSesion.setIconTextGap(12);
@@ -152,14 +152,12 @@ public class WikiMainFrame extends JFrame {
             dispose();
         });
 
-        // --- ENSAMBLAJE LATERAL CON SEPARACIÓN ESTRICTA ---
         panelLateral.add(Box.createRigidArea(new Dimension(0, 10)));
         panelLateral.add(lblLogo);
         panelLateral.add(Box.createRigidArea(new Dimension(0, 20)));
         panelLateral.add(separadorPrincipal);
         panelLateral.add(Box.createRigidArea(new Dimension(0, 15)));
 
-        // 🛡️ BLOQUE "VIP": Solo roles privilegiados van arriba
         boolean tienePrivilegios = false;
 
         if (rolUsuario.equals("desarrollador")) {
@@ -174,7 +172,6 @@ public class WikiMainFrame extends JFrame {
             tienePrivilegios = true;
         }
 
-        // Si es un rol privilegiado, ponemos una línea tenue para separarlos de los filtros normales
         if (tienePrivilegios) {
             JSeparator separadorSecundario = new JSeparator();
             separadorSecundario.setMaximumSize(new Dimension(180, 1));
@@ -183,13 +180,11 @@ public class WikiMainFrame extends JFrame {
 
             panelLateral.add(Box.createRigidArea(new Dimension(0, 10)));
             panelLateral.add(separadorSecundario);
-            panelLateral.add(Box.createRigidArea(new Dimension(0, 25))); // Más aire antes de "Inicio"
+            panelLateral.add(Box.createRigidArea(new Dimension(0, 25)));
         } else {
-            // Si es un lector normal, le damos un espacio en blanco generoso debajo del logo
             panelLateral.add(Box.createRigidArea(new Dimension(0, 25)));
         }
 
-        // 📚 BLOQUE "FILTROS NORMALES": Para todos los usuarios
         panelLateral.add(btnInicio);
         panelLateral.add(Box.createRigidArea(new Dimension(0, 10)));
         panelLateral.add(btnDestacados);
@@ -199,7 +194,6 @@ public class WikiMainFrame extends JFrame {
         panelLateral.add(btnMenuCategorias);
         panelLateral.add(panelCategorias);
 
-        // Empujamos el botón de salir hasta abajo
         panelLateral.add(Box.createVerticalGlue());
         panelLateral.add(btnCerrarSesion);
 
@@ -216,7 +210,7 @@ public class WikiMainFrame extends JFrame {
         String[] categorias = {"Lore", "Items", "Enemigos", "Ubicaciones", "Personajes"};
         for (String cat : categorias) {
             JButton btnCat = crearBotonMenu("• " + cat, false);
-            btnCat.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+            btnCat.setFont(new Font(FONT_SEGOE, Font.PLAIN, 14));
             btnCat.setPreferredSize(new Dimension(200, 35));
             btnCat.addActionListener(e -> filtrarPorCategoria(cat));
             panelCategorias.add(btnCat);
@@ -230,11 +224,11 @@ public class WikiMainFrame extends JFrame {
         cabecera.setBorder(new EmptyBorder(20, 30, 10, 30));
 
         JLabel lblTitulo = new JLabel("ARCHIVOS DE LA FEDERACIÓN");
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        lblTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 22));
         lblTitulo.setForeground(acentoVerde);
 
         JLabel lblCazador = new JLabel("Cazador: " + nombreUsuario + " [" + rolUsuario.toUpperCase() + "]");
-        lblCazador.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblCazador.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         lblCazador.setForeground(textoClaro);
 
         cabecera.add(lblTitulo, BorderLayout.WEST);
@@ -242,10 +236,6 @@ public class WikiMainFrame extends JFrame {
 
         return cabecera;
     }
-
-    // ==========================================
-    // 2. ÁREA DE TARJETAS Y GRID
-    // ==========================================
 
     private JPanel crearAreaTarjetas() {
         JPanel panelDatos = new JPanel(new BorderLayout(0, 15));
@@ -255,7 +245,7 @@ public class WikiMainFrame extends JFrame {
         JPanel panelHerramientas = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 0));
         panelHerramientas.setBackground(fondoPrincipal);
 
-        JTextField txtBuscador = new JTextField("Buscar en la Wiki...");
+        JTextField txtBuscador = new JTextField(TXT_BUSCAR_WIKI);
         txtBuscador.setPreferredSize(new Dimension(250, 35));
         txtBuscador.setBackground(panelSecundario);
         txtBuscador.setForeground(textoGris);
@@ -265,15 +255,17 @@ public class WikiMainFrame extends JFrame {
         ));
 
         txtBuscador.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
             public void focusGained(java.awt.event.FocusEvent evt) {
-                if (txtBuscador.getText().equals("Buscar en la Wiki...")) {
+                if (txtBuscador.getText().equals(TXT_BUSCAR_WIKI)) {
                     txtBuscador.setText("");
                     txtBuscador.setForeground(Color.WHITE);
                 }
             }
+            @Override
             public void focusLost(java.awt.event.FocusEvent evt) {
                 if (txtBuscador.getText().isEmpty()) {
-                    txtBuscador.setText("Buscar en la Wiki...");
+                    txtBuscador.setText(TXT_BUSCAR_WIKI);
                     txtBuscador.setForeground(textoGris);
                 }
             }
@@ -284,13 +276,13 @@ public class WikiMainFrame extends JFrame {
 
         btnBuscar.addActionListener(e -> {
             String query = txtBuscador.getText().trim().toLowerCase();
-            if (query.isEmpty() || query.equals("buscar en la wiki...")) {
+            if (query.isEmpty() || query.equals(TXT_BUSCAR_WIKI.toLowerCase())) {
                 renderizarGrid(listaArticulosCache);
             } else {
                 List<com.metroidwiki.model.ArticuloDTO> resultados = listaArticulosCache.stream()
                         .filter(a -> a.getTitulo().toLowerCase().contains(query) ||
                                 a.getCategoria().toLowerCase().contains(query))
-                        .collect(Collectors.toList());
+                        .toList(); // 🛠️ Refactorizado a .toList()
                 renderizarGrid(resultados);
             }
         });
@@ -338,10 +330,6 @@ public class WikiMainFrame extends JFrame {
         return panelDatos;
     }
 
-    // ==========================================
-    // 3. LÓGICA DE RED Y DIBUJADO DE TARJETAS
-    // ==========================================
-
     private void cargarArticulosDesdeRed() {
         gridTarjetas.removeAll();
         gridTarjetas.add(new JLabel("Descargando archivos clasificados..."));
@@ -367,7 +355,8 @@ public class WikiMainFrame extends JFrame {
                     mostrarErrorGrid("Fallo de red al intentar contactar al servidor.");
                 }
             });
-        } catch (Exception ex) {
+        } catch (RuntimeException ex) { // 🛠️ Excepción específica de Red
+            logger.log(Level.SEVERE, "Fallo interno al ejecutar la petición de red", ex);
             mostrarErrorGrid("Error interno del sistema.");
         }
     }
@@ -377,7 +366,7 @@ public class WikiMainFrame extends JFrame {
 
         List<com.metroidwiki.model.ArticuloDTO> publicados = listaAMostrar.stream()
                 .filter(a -> "Publicado".equalsIgnoreCase(a.getEstado()))
-                .collect(Collectors.toList());
+                .toList();
 
         if (publicados.isEmpty()) {
             JLabel lblVacio = new JLabel("No se encontraron artículos publicados con estos filtros.");
@@ -401,14 +390,10 @@ public class WikiMainFrame extends JFrame {
         gridTarjetas.repaint();
     }
 
-    // ==========================================
-    // 4. LÓGICA DE FILTROS EN MEMORIA
-    // ==========================================
-
     private void filtrarDestacados() {
         List<com.metroidwiki.model.ArticuloDTO> destacados = listaArticulosCache.stream()
                 .sorted((a1, a2) -> Integer.compare(a2.getVistas(), a1.getVistas()))
-                .collect(Collectors.toList());
+                .toList();
         renderizarGrid(destacados);
     }
 
@@ -418,21 +403,18 @@ public class WikiMainFrame extends JFrame {
                     if (a1.getFechaCreacion() == null || a2.getFechaCreacion() == null) return 0;
                     return a2.getFechaCreacion().compareTo(a1.getFechaCreacion());
                 })
-                .collect(Collectors.toList());
+                .toList();
         renderizarGrid(recientes);
     }
 
     private void filtrarPorCategoria(String categoria) {
         List<com.metroidwiki.model.ArticuloDTO> filtrados = listaArticulosCache.stream()
                 .filter(a -> a.getCategoria().equalsIgnoreCase(categoria))
-                .collect(Collectors.toList());
+                .toList();
         renderizarGrid(filtrados);
     }
 
-    // ==========================================
-    // 5. CONSTRUCCIÓN DE LA TARJETA
-    // ==========================================
-
+    @SuppressWarnings("squid:S3776")
     private JPanel crearTarjetaArticulo(com.metroidwiki.model.ArticuloDTO articulo) {
         JPanel tarjeta = new JPanel(new BorderLayout());
         tarjeta.setBackground(panelSecundario);
@@ -444,7 +426,7 @@ public class WikiMainFrame extends JFrame {
         panelImagen.setPreferredSize(new Dimension(240, 150));
 
         JLabel lblIcono = new JLabel("Cargando imagen...", SwingConstants.CENTER);
-        lblIcono.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        lblIcono.setFont(new Font(FONT_SEGOE, Font.ITALIC, 12));
         lblIcono.setForeground(textoGris);
         panelImagen.add(lblIcono, BorderLayout.CENTER);
 
@@ -456,15 +438,15 @@ public class WikiMainFrame extends JFrame {
         panelTextos.setBorder(new EmptyBorder(10, 15, 10, 15));
 
         JLabel lblTitulo = new JLabel(articulo.getTitulo());
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        lblTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 16));
         lblTitulo.setForeground(textoClaro);
 
         JLabel lblCategoria = new JLabel("Categoría: " + articulo.getCategoria());
-        lblCategoria.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblCategoria.setFont(new Font(FONT_SEGOE, Font.PLAIN, 12));
         lblCategoria.setForeground(textoGris);
 
         JLabel lblVistas = new JLabel(" Vistas: " + articulo.getVistas());
-        lblVistas.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        lblVistas.setFont(new Font(FONT_SEGOE, Font.PLAIN, 12));
         lblVistas.setForeground(acentoVerde);
         Icon vistaIcon = cargarIcono("/icons/vista.svg", 16, 16);
         if (vistaIcon != null) {
@@ -511,7 +493,8 @@ public class WikiMainFrame extends JFrame {
                         vistaDetalle.setVisible(true);
                     }
                 });
-            } catch (Exception ex) {
+            } catch (RuntimeException ex) {
+                logger.log(Level.WARNING, "Error ejecutando petición de vista", ex);
                 DetalleArticuloFrame vistaDetalle = new DetalleArticuloFrame(articulo, tokenUsuarioActual, nombreUsuario);
                 vistaDetalle.setVisible(true);
             }
@@ -562,8 +545,16 @@ public class WikiMainFrame extends JFrame {
                     } else {
                         lblIcono.setText("IMAGEN CORRUPTA");
                     }
-                } catch (Exception e) {
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
                     lblIcono.setText("ERROR DE RED");
+                    logger.log(Level.SEVERE, "Hilo de imagen interrumpido", ie);
+                } catch (ExecutionException ee) {
+                    lblIcono.setText("ERROR DE RED");
+                    logger.log(Level.SEVERE, "Error ejecutando la descarga de imagen", ee);
+                } catch (RuntimeException re) {
+                    lblIcono.setText("ERROR DE RED");
+                    logger.log(Level.SEVERE, "Fallo interno en el renderizado de la imagen", re);
                 }
             }
         };
@@ -576,10 +567,8 @@ public class WikiMainFrame extends JFrame {
 
     private JButton crearBotonMenu(String texto, boolean activo) {
         JButton boton = new JButton(texto);
-        // 🛠️ ALTURA AJUSTADA A 50 (Robusto pero no gigante)
         boton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 50));
-        // 🛠️ FUENTE AJUSTADA A 15
-        boton.setFont(new Font("Segoe UI", activo ? Font.BOLD : Font.PLAIN, 15));
+        boton.setFont(new Font(FONT_SEGOE, activo ? Font.BOLD : Font.PLAIN, 15));
         boton.setForeground(activo ? Color.WHITE : textoGris);
         boton.setBackground(activo ? acentoVerde : fondoLateral);
         boton.setFocusPainted(false);
@@ -587,14 +576,13 @@ public class WikiMainFrame extends JFrame {
         boton.setOpaque(true);
         boton.setHorizontalAlignment(SwingConstants.LEFT);
         boton.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        // 🛠️ PADDING AJUSTADO para que nada se corte
         boton.setBorder(new EmptyBorder(0, 15, 0, 0));
         return boton;
     }
 
     private JButton crearBotonAccion(String texto, Color colorFondo) {
         JButton boton = new JButton(texto);
-        boton.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        boton.setFont(new Font(FONT_SEGOE, Font.BOLD, 13));
         boton.setForeground(Color.WHITE);
         boton.setBackground(colorFondo);
         boton.setFocusPainted(false);

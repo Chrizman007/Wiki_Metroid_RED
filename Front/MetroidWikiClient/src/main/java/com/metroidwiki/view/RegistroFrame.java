@@ -13,8 +13,16 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.io.IOException;
 import java.net.ConnectException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class RegistroFrame extends JFrame {
+
+    private static final Logger logger = Logger.getLogger(RegistroFrame.class.getName());
+
+    // 🛠️ Constante extraída para Clean Code
+    private static final String FONT_SEGOE = "Segoe UI";
+
     // NUEVO: Campo para el nombre
     private JTextField txtNombre;
     private JTextField txtCorreo;
@@ -31,16 +39,15 @@ public class RegistroFrame extends JFrame {
 
     public RegistroFrame() {
         setTitle("Metroid Wiki - Nueva Cuenta");
-        // Aumentamos un poquito la altura para que quepa el nuevo campo cómodamente
         setSize(400, 600);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
         getContentPane().setBackground(fondoOscuro);
         setLayout(new BorderLayout());
 
         JLabel lblTitulo = new JLabel("NUEVO CAZADOR", SwingConstants.CENTER);
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        lblTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 24));
         lblTitulo.setForeground(acentoVerde);
         lblTitulo.setBorder(new EmptyBorder(20, 0, 15, 0));
         add(lblTitulo, BorderLayout.NORTH);
@@ -63,8 +70,8 @@ public class RegistroFrame extends JFrame {
         gbc.gridx = 0;
         gbc.weightx = 1.0;
 
-        Font fuenteLabel = new Font("Segoe UI", Font.BOLD, 14);
-        Font fuenteInput = new Font("Segoe UI", Font.PLAIN, 16);
+        Font fuenteLabel = new Font(FONT_SEGOE, Font.BOLD, 14);
+        Font fuenteInput = new Font(FONT_SEGOE, Font.PLAIN, 16);
 
         // --- NUEVO: NOMBRE ---
         JLabel lblNombre = new JLabel("Nombre de Cazador:", SwingConstants.CENTER);
@@ -73,7 +80,7 @@ public class RegistroFrame extends JFrame {
 
         txtNombre = new JTextField();
         txtNombre.setFont(fuenteInput);
-        txtNombre.setHorizontalAlignment(JTextField.CENTER);
+        txtNombre.setHorizontalAlignment(SwingConstants.CENTER);
         txtNombre.setPreferredSize(new Dimension(200, 35));
 
         // --- CORREO ---
@@ -83,7 +90,7 @@ public class RegistroFrame extends JFrame {
 
         txtCorreo = new JTextField();
         txtCorreo.setFont(fuenteInput);
-        txtCorreo.setHorizontalAlignment(JTextField.CENTER);
+        txtCorreo.setHorizontalAlignment(SwingConstants.CENTER);
         txtCorreo.setPreferredSize(new Dimension(200, 35));
 
         // --- CONTRASEÑA ---
@@ -93,7 +100,7 @@ public class RegistroFrame extends JFrame {
 
         txtPassword = new JPasswordField();
         txtPassword.setFont(fuenteInput);
-        txtPassword.setHorizontalAlignment(JTextField.CENTER);
+        txtPassword.setHorizontalAlignment(SwingConstants.CENTER);
         txtPassword.setPreferredSize(new Dimension(200, 35));
 
         // --- CONFIRMAR CONTRASEÑA ---
@@ -103,7 +110,7 @@ public class RegistroFrame extends JFrame {
 
         txtConfirmarPassword = new JPasswordField();
         txtConfirmarPassword.setFont(fuenteInput);
-        txtConfirmarPassword.setHorizontalAlignment(JTextField.CENTER);
+        txtConfirmarPassword.setHorizontalAlignment(SwingConstants.CENTER);
         txtConfirmarPassword.setPreferredSize(new Dimension(200, 35));
 
         // Acomodamos en la cuadrícula
@@ -125,7 +132,7 @@ public class RegistroFrame extends JFrame {
         panelInferior.setBorder(new EmptyBorder(10, 0, 20, 0));
 
         btnRegistrar = new JButton("CREAR CUENTA");
-        btnRegistrar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnRegistrar.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         btnRegistrar.setBackground(acentoVerde);
         btnRegistrar.setForeground(Color.WHITE);
         btnRegistrar.setFocusPainted(false);
@@ -136,7 +143,7 @@ public class RegistroFrame extends JFrame {
         btnRegistrar.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         btnVolver = new JButton("Volver al Login");
-        btnVolver.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnVolver.setFont(new Font(FONT_SEGOE, Font.BOLD, 12));
         btnVolver.setBackground(botonSecundario);
         btnVolver.setForeground(Color.WHITE);
         btnVolver.setFocusPainted(false);
@@ -156,8 +163,9 @@ public class RegistroFrame extends JFrame {
         add(panelInferior, BorderLayout.SOUTH);
     }
 
+    @SuppressWarnings("squid:S3776")
     private void intentarRegistro() {
-        String nombre = txtNombre.getText(); // Extraemos el nuevo campo
+        String nombre = txtNombre.getText();
         String correo = txtCorreo.getText();
         String password = new String(txtPassword.getPassword());
         String confirmar = new String(txtConfirmarPassword.getPassword());
@@ -177,7 +185,6 @@ public class RegistroFrame extends JFrame {
 
         try {
             AuthClient client = RetrofitClient.getClient().create(AuthClient.class);
-            // Ahora le mandamos el nombre también en la petición
             RegistroRequest request = new RegistroRequest(nombre, correo, password);
 
             client.registrarUsuario(request).enqueue(new Callback<AuthResponse>() {
@@ -213,6 +220,7 @@ public class RegistroFrame extends JFrame {
                 }
             });
         } catch (IllegalArgumentException ex) {
+            logger.log(Level.SEVERE, "Error de configuración de red interna.", ex);
             JOptionPane.showMessageDialog(this, "Error de configuración de red interna.", "Error de Configuración", JOptionPane.ERROR_MESSAGE);
             restaurarBoton();
         }
@@ -226,12 +234,10 @@ public class RegistroFrame extends JFrame {
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e) {
+            logger.log(Level.WARNING, "No se pudo cargar el estilo visual del sistema", e);
         }
 
-        SwingUtilities.invokeLater(() -> {
-            new RegistroFrame().setVisible(true);
-        });
+        SwingUtilities.invokeLater(() -> new RegistroFrame().setVisible(true));
     }
 }

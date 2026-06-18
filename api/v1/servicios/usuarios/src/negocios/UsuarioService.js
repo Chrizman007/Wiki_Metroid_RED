@@ -242,7 +242,6 @@ router.post('/login', async (req, res) => {
       `Bearer ${authData.token}`
     );
 
-    // Armamos el JSON de respuesta
     res.status(200).json({
       message: 'Login exitoso',
       nombre: authData.usuario.nombre,
@@ -260,8 +259,7 @@ router.post('/login', async (req, res) => {
 async function startAuthServer() {
   try {
 
-    console.log("🕵️ Ruta REAL de conexión:", config.mongoUri);
-    // Conexión directa y limpia usando la URI completa de MongoDB Atlas
+    console.log("Ruta REAL de conexión:", config.mongoUri);
     await mongoose.connect(config.mongoUri);
     console.log('¡Conectado exitosamente a MongoDB Atlas en la nube!');
     

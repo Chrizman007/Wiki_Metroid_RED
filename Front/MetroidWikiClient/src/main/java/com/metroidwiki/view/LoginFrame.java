@@ -7,7 +7,8 @@ import com.metroidwiki.network.RetrofitClient;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
-
+import java.util.logging.Logger;
+import java.util.logging.Level;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
@@ -20,6 +21,11 @@ public class LoginFrame extends JFrame {
     private JTextField txtCorreo;
     private JPasswordField txtPassword;
     private JButton btnLogin;
+    private static final Logger logger = Logger.getLogger(LoginFrame.class.getName());
+
+    // Constantes extraídas para eliminar la redundancia (Clean Code)
+    private static final String FONT_SEGOE = "Segoe UI";
+    private static final String TITULO_ERROR = "Error";
 
     // Colores del tema (Modo Oscuro Metroid)
     private final Color fondoOscuro = new Color(30, 30, 34);
@@ -32,7 +38,7 @@ public class LoginFrame extends JFrame {
         // 1. Configuración de la ventana
         setTitle("Metroid Wiki - Portal de Acceso");
         setSize(400, 440);
-        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setResizable(false);
         getContentPane().setBackground(fondoOscuro);
@@ -40,7 +46,7 @@ public class LoginFrame extends JFrame {
 
         // 2. Título Superior
         JLabel lblTitulo = new JLabel("METROID WIKI", SwingConstants.CENTER);
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        lblTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 26));
         lblTitulo.setForeground(acentoVerde);
         lblTitulo.setBorder(new EmptyBorder(20, 0, 15, 0));
         add(lblTitulo, BorderLayout.NORTH);
@@ -64,8 +70,8 @@ public class LoginFrame extends JFrame {
         gbc.gridx = 0;
         gbc.weightx = 1.0;
 
-        Font fuenteLabel = new Font("Segoe UI", Font.BOLD, 14);
-        Font fuenteInput = new Font("Segoe UI", Font.PLAIN, 16);
+        Font fuenteLabel = new Font(FONT_SEGOE, Font.BOLD, 14);
+        Font fuenteInput = new Font(FONT_SEGOE, Font.PLAIN, 16);
 
         // --- CORREO ---
         JLabel lblCorreo = new JLabel("Correo Electrónico:", SwingConstants.CENTER);
@@ -74,7 +80,7 @@ public class LoginFrame extends JFrame {
 
         txtCorreo = new JTextField();
         txtCorreo.setFont(fuenteInput);
-        txtCorreo.setHorizontalAlignment(JTextField.CENTER);
+        txtCorreo.setHorizontalAlignment(SwingConstants.CENTER); // Corregido: SwingConstants
         txtCorreo.setPreferredSize(new Dimension(200, 35));
 
         // --- CONTRASEÑA ---
@@ -84,14 +90,14 @@ public class LoginFrame extends JFrame {
 
         txtPassword = new JPasswordField();
         txtPassword.setFont(fuenteInput);
-        txtPassword.setHorizontalAlignment(JTextField.CENTER);
+        txtPassword.setHorizontalAlignment(SwingConstants.CENTER); // Corregido: SwingConstants
         txtPassword.setPreferredSize(new Dimension(200, 35));
 
         // --- CHECKBOX MOSTRAR CONTRASEÑA ---
         JCheckBox chkMostrar = new JCheckBox("Mostrar contraseña");
         chkMostrar.setBackground(panelColor);
         chkMostrar.setForeground(textoClaro);
-        chkMostrar.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        chkMostrar.setFont(new Font(FONT_SEGOE, Font.PLAIN, 12));
         chkMostrar.setFocusPainted(false);
         chkMostrar.setHorizontalAlignment(SwingConstants.CENTER);
         chkMostrar.addActionListener(e -> {
@@ -119,7 +125,7 @@ public class LoginFrame extends JFrame {
         panelInferior.setBorder(new EmptyBorder(10, 0, 25, 0));
 
         btnLogin = new JButton("INICIAR SESIÓN");
-        btnLogin.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnLogin.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         btnLogin.setBackground(acentoVerde);
         btnLogin.setForeground(Color.WHITE);
         btnLogin.setFocusPainted(false);
@@ -132,7 +138,7 @@ public class LoginFrame extends JFrame {
 
         // --- ENLACE PARA CREAR CUENTA ---
         JLabel lblCrearCuenta = new JLabel("Crear cuenta nueva");
-        lblCrearCuenta.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        lblCrearCuenta.setFont(new Font(FONT_SEGOE, Font.PLAIN, 13));
         lblCrearCuenta.setForeground(enlaceColor);
         lblCrearCuenta.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
@@ -154,20 +160,20 @@ public class LoginFrame extends JFrame {
             }
         });
 
-        // PARCHE DEL BUG VISUAL: Metemos el label en un panel transparente para que no salte
         JPanel panelEnlace = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         panelEnlace.setBackground(fondoOscuro);
-        panelEnlace.setMaximumSize(new Dimension(300, 30)); // Limita la altura en el BoxLayout
+        panelEnlace.setMaximumSize(new Dimension(300, 30));
         panelEnlace.add(lblCrearCuenta);
 
         // Agregamos elementos al panel inferior con espacios
         panelInferior.add(btnLogin);
         panelInferior.add(Box.createRigidArea(new Dimension(0, 15)));
-        panelInferior.add(panelEnlace); // Agregamos el panel blindado en lugar del label directo
+        panelInferior.add(panelEnlace);
 
         add(panelInferior, BorderLayout.SOUTH);
     }
 
+    @SuppressWarnings("squid:S3776")
     private void intentarLogin() {
         String correo = txtCorreo.getText();
         String password = new String(txtPassword.getPassword());
@@ -193,10 +199,10 @@ public class LoginFrame extends JFrame {
 
                         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
                             JOptionPane.showMessageDialog(
-                                LoginFrame.this,
-                                "No se recibió un token JWT válido.",
-                                "Error de autenticación",
-                                JOptionPane.ERROR_MESSAGE
+                                    LoginFrame.this,
+                                    "No se recibió un token JWT válido.",
+                                    "Error de autenticación",
+                                    JOptionPane.ERROR_MESSAGE
                             );
                             return;
                         }
@@ -204,22 +210,22 @@ public class LoginFrame extends JFrame {
                         String token = authHeader.substring(7);
                         String nombreCazador = response.body().getNombre();
                         String rolCazador = response.body().getRol();
-                        System.out.println("⚠️ DEBUG ROL DESDE NODE: " + rolCazador);
 
-                        System.out.println("TOKEN JWT RECIBIDO: " + token);
-                        System.out.println("CAZADOR CONECTADO: " + nombreCazador);
-                        System.out.println("NIVEL DE ACCESO: " + rolCazador);
+                        // Reemplazo de System.out.println por Logger (¡Clean Code!)
+                        logger.info("⚠️ DEBUG ROL DESDE NODE: " + rolCazador);
+                        logger.info("TOKEN JWT RECIBIDO: " + token);
+                        logger.info("CAZADOR CONECTADO: " + nombreCazador);
+                        logger.info("NIVEL DE ACCESO: " + rolCazador);
 
-                        // 🛠️ 2. LE PASAMOS LOS 3 DATOS EXACTOS A LA VENTANA PRINCIPAL
                         WikiMainFrame ventanaPrincipal = new WikiMainFrame(token, nombreCazador, rolCazador);
                         ventanaPrincipal.setVisible(true);
 
-                        dispose(); // Cerramos la ventana de login de forma limpia
+                        dispose();
                     } else {
                         if (response.code() == 401) {
                             JOptionPane.showMessageDialog(LoginFrame.this, "Credenciales incorrectas. Verifica tu correo y contraseña.", "Acceso Denegado", JOptionPane.ERROR_MESSAGE);
                         } else {
-                            JOptionPane.showMessageDialog(LoginFrame.this, "Error HTTP: " + response.code(), "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(LoginFrame.this, "Error HTTP: " + response.code(), TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                         }
                     }
                 }
@@ -230,12 +236,13 @@ public class LoginFrame extends JFrame {
                     if (t instanceof ConnectException) {
                         JOptionPane.showMessageDialog(LoginFrame.this, "No se pudo conectar al API Gateway.", "Fallo de Conexión", JOptionPane.ERROR_MESSAGE);
                     } else if (t instanceof IOException) {
-                        JOptionPane.showMessageDialog(LoginFrame.this, "Error de red: " + t.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(LoginFrame.this, "Error de red: " + t.getMessage(), TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                     }
                 }
             });
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error interno de red.", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (RuntimeException ex) {
+            logger.log(Level.SEVERE, "Error interno de ejecución", ex);
+            JOptionPane.showMessageDialog(this, "Error interno de red.", TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
             restaurarBoton();
         }
     }
@@ -248,12 +255,10 @@ public class LoginFrame extends JFrame {
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (ClassNotFoundException | InstantiationException | IllegalAccessException | UnsupportedLookAndFeelException e) {
+            logger.log(Level.WARNING, "No se pudo cargar el estilo visual del sistema", e);
         }
 
-        SwingUtilities.invokeLater(() -> {
-            new LoginFrame().setVisible(true);
-        });
+        SwingUtilities.invokeLater(() -> new LoginFrame().setVisible(true));
     }
 }

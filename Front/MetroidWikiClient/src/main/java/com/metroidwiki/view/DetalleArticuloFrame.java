@@ -16,36 +16,48 @@ import java.net.URL;
 import java.util.Base64;
 import javax.imageio.ImageIO;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.concurrent.ExecutionException;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 
 public class DetalleArticuloFrame extends JFrame {
+
+    private static final Logger logger = Logger.getLogger(DetalleArticuloFrame.class.getName());
+
+    // 🛠️ CONSTANTES DE CLEAN CODE
+    private static final String FONT_SEGOE = "Segoe UI";
+    private static final String TITULO_ERROR = "Error";
+    private static final String PREFIJO_BEARER = "Bearer ";
+    private static final String TXT_PLACEHOLDER_COMENTARIO = "Escribe una transmisión pública...";
 
     // Paleta de colores
     private final Color fondoPrincipal = new Color(25, 25, 28);
     private final Color panelSecundario = new Color(35, 35, 40);
     private final Color fondoFicha = new Color(18, 18, 20);
     private final Color acentoVerde = new Color(76, 175, 80);
-    private final Color acentoRojo = new Color(244, 67, 54); // 🛠️ Color para moderar
+    private final Color acentoRojo = new Color(244, 67, 54);
     private final Color textoClaro = new Color(230, 230, 230);
     private final Color textoGris = new Color(150, 150, 150);
 
-    private ArticuloDTO articulo;
-    private String tokenUsuario;
-    private String nombreUsuario;
-    private String usuarioIdActual;
-    private String rolUsuarioActual; // 🛠️ Variable para guardar el rol
-    private JPanel panelComentariosContenedor;
+    //VARIABLES TRANSIENT PARA OBJETOS NO SERIALIZABLES
+    private transient ArticuloDTO articulo;
+    private transient String tokenUsuario;
+    private transient String nombreUsuario;
+    private transient String usuarioIdActual;
+    private transient String rolUsuarioActual;
+    private transient JPanel panelComentariosContenedor;
 
     public DetalleArticuloFrame(ArticuloDTO articulo, String token, String nombreUsuario) {
         this.articulo = articulo;
         this.tokenUsuario = token;
         this.nombreUsuario = nombreUsuario != null ? nombreUsuario : "Usuario";
         this.usuarioIdActual = extraerDatoDesdeToken(token, "\"id\"");
-        this.rolUsuarioActual = extraerDatoDesdeToken(token, "\"rol\""); // 🛠️ Extraemos el rol del JWT
+        this.rolUsuarioActual = extraerDatoDesdeToken(token, "\"rol\"");
 
         setTitle("Federación Galáctica - " + articulo.getTitulo());
         setSize(850, 750);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE); // 🛠️ Corregido WindowConstants
         setLocationRelativeTo(null);
 
         JPanel panelContenedorAbsoluto = new JPanel(new BorderLayout());
@@ -64,7 +76,7 @@ public class DetalleArticuloFrame extends JFrame {
         panelCuerpoCentral.setBorder(new EmptyBorder(10, 30, 20, 30));
 
         JTextArea txtLore = new JTextArea(articulo.getContenido());
-        txtLore.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        txtLore.setFont(new Font(FONT_SEGOE, Font.PLAIN, 15));
         txtLore.setForeground(textoClaro);
         txtLore.setBackground(fondoPrincipal);
         txtLore.setEditable(false);
@@ -79,15 +91,12 @@ public class DetalleArticuloFrame extends JFrame {
         cargarComentarios();
     }
 
-    // ==========================================
-    // 🛠️ HERRAMIENTA: CARGADOR DE ÍCONOS VECTORIALES (SVG)
-    // ==========================================
     private Icon cargarIcono(String ruta, int width, int height) {
         try {
             String rutaLimpia = ruta.startsWith("/") ? ruta.substring(1) : ruta;
             return new FlatSVGIcon(rutaLimpia, width, height);
-        } catch (Exception e) {
-            System.err.println("❌ Error cargando SVG " + ruta + ": " + e.getMessage());
+        } catch (RuntimeException e) { // 🛠️ Excepción específica y logger
+            logger.log(Level.SEVERE, "❌ Error cargando SVG " + ruta, e);
             return null;
         }
     }
@@ -102,14 +111,14 @@ public class DetalleArticuloFrame extends JFrame {
         panelIzquierdo.setBackground(fondoPrincipal);
 
         JLabel lblTitulo = new JLabel(articulo.getTitulo().toUpperCase());
-        lblTitulo.setFont(new Font("Segoe UI", Font.BOLD, 26));
+        lblTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 26));
         lblTitulo.setForeground(acentoVerde);
 
         String fechaLimpia = articulo.getFechaCreacion() != null ? articulo.getFechaCreacion().split("T")[0] : "Fecha estelar desconocida";
         String realAutor = (articulo.getAutor() != null && !articulo.getAutor().isEmpty()) ? articulo.getAutor() : "Operador de la Federación";
 
         JLabel lblMeta = new JLabel("Registrado por: " + realAutor + "  |  Fecha: " + fechaLimpia);
-        lblMeta.setFont(new Font("Segoe UI", Font.ITALIC, 12));
+        lblMeta.setFont(new Font(FONT_SEGOE, Font.ITALIC, 12));
         lblMeta.setForeground(textoGris);
 
         panelIzquierdo.add(lblTitulo);
@@ -119,9 +128,8 @@ public class DetalleArticuloFrame extends JFrame {
         JPanel panelDerecho = new JPanel(new GridBagLayout());
         panelDerecho.setBackground(fondoPrincipal);
 
-        // 🛠️ INYECCIÓN DEL ÍCONO SVG DE VISTAS
         JLabel lblVistas = new JLabel(" " + articulo.getVistas() + " Vistas");
-        lblVistas.setFont(new Font("Segoe UI", Font.BOLD, 15));
+        lblVistas.setFont(new Font(FONT_SEGOE, Font.BOLD, 15));
         lblVistas.setForeground(acentoVerde);
         Icon vistaIcon = cargarIcono("/icons/vista.svg", 22, 22);
         if (vistaIcon != null) {
@@ -154,7 +162,7 @@ public class DetalleArticuloFrame extends JFrame {
         ));
 
         JLabel lblFichaTitulo = new JLabel("DATOS CLASIFICADOS", SwingConstants.CENTER);
-        lblFichaTitulo.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        lblFichaTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 13));
         lblFichaTitulo.setForeground(Color.WHITE);
         lblFichaTitulo.setBackground(panelSecundario);
         lblFichaTitulo.setOpaque(true);
@@ -167,29 +175,29 @@ public class DetalleArticuloFrame extends JFrame {
         lblImagenFicha.setBackground(new Color(12, 12, 14));
         lblImagenFicha.setOpaque(true);
         lblImagenFicha.setForeground(textoGris);
-        lblImagenFicha.setFont(new Font("Segoe UI", Font.ITALIC, 11));
+        lblImagenFicha.setFont(new Font(FONT_SEGOE, Font.ITALIC, 11));
         lblImagenFicha.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         cargarImagenFichaAsincrona(articulo.getImagen(), lblImagenFicha);
 
         JLabel lblCatTitulo = new JLabel("CATEGORÍA:");
-        lblCatTitulo.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblCatTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 11));
         lblCatTitulo.setForeground(acentoVerde);
         lblCatTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JLabel lblCatValor = new JLabel(articulo.getCategoria(), SwingConstants.CENTER);
-        lblCatValor.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        lblCatValor.setFont(new Font(FONT_SEGOE, Font.PLAIN, 14));
         lblCatValor.setForeground(textoClaro);
         lblCatValor.setAlignmentX(Component.CENTER_ALIGNMENT);
         lblCatValor.setMaximumSize(new Dimension(Integer.MAX_VALUE, 20));
 
         JLabel lblDescTitulo = new JLabel("DESCRIPCIÓN BREVE:");
-        lblDescTitulo.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblDescTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 11));
         lblDescTitulo.setForeground(acentoVerde);
         lblDescTitulo.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         JTextArea txtDescValor = new JTextArea(articulo.getDescripcion());
-        txtDescValor.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        txtDescValor.setFont(new Font(FONT_SEGOE, Font.PLAIN, 13));
         txtDescValor.setForeground(textoClaro);
         txtDescValor.setBackground(fondoFicha);
         txtDescValor.setEditable(false);
@@ -235,7 +243,7 @@ public class DetalleArticuloFrame extends JFrame {
         panelComentarios.add(Box.createRigidArea(new Dimension(0, 20)));
 
         JLabel lblSeccionTitulo = new JLabel("TRANSMISIONES DE LA COMUNIDAD (COMENTARIOS)");
-        lblSeccionTitulo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        lblSeccionTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         lblSeccionTitulo.setForeground(acentoVerde);
         lblSeccionTitulo.setAlignmentX(Component.LEFT_ALIGNMENT);
         panelComentarios.add(lblSeccionTitulo);
@@ -246,10 +254,10 @@ public class DetalleArticuloFrame extends JFrame {
         panelEscribir.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
         panelEscribir.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JTextArea txtNuevoComentario = new JTextArea("Escribe una transmisión pública...");
+        JTextArea txtNuevoComentario = new JTextArea(TXT_PLACEHOLDER_COMENTARIO);
         txtNuevoComentario.setBackground(panelSecundario);
         txtNuevoComentario.setForeground(textoGris);
-        txtNuevoComentario.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        txtNuevoComentario.setFont(new Font(FONT_SEGOE, Font.PLAIN, 13));
         txtNuevoComentario.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(panelSecundario),
                 new EmptyBorder(5, 10, 5, 10)
@@ -259,15 +267,17 @@ public class DetalleArticuloFrame extends JFrame {
         txtNuevoComentario.setRows(3);
 
         txtNuevoComentario.addFocusListener(new java.awt.event.FocusAdapter() {
+            @Override
             public void focusGained(java.awt.event.FocusEvent evt) {
-                if (txtNuevoComentario.getText().equals("Escribe una transmisión pública...")) {
+                if (txtNuevoComentario.getText().equals(TXT_PLACEHOLDER_COMENTARIO)) {
                     txtNuevoComentario.setText("");
                     txtNuevoComentario.setForeground(textoClaro);
                 }
             }
+            @Override
             public void focusLost(java.awt.event.FocusEvent evt) {
                 if (txtNuevoComentario.getText().isEmpty()) {
-                    txtNuevoComentario.setText("Escribe una transmisión pública...");
+                    txtNuevoComentario.setText(TXT_PLACEHOLDER_COMENTARIO);
                     txtNuevoComentario.setForeground(textoGris);
                 }
             }
@@ -278,22 +288,22 @@ public class DetalleArticuloFrame extends JFrame {
         panelDerecha.setBackground(fondoPrincipal);
 
         JLabel lblContador = new JLabel("0/512");
-        lblContador.setFont(new Font("Segoe UI", Font.PLAIN, 11));
+        lblContador.setFont(new Font(FONT_SEGOE, Font.PLAIN, 11));
         lblContador.setForeground(textoGris);
         lblContador.setAlignmentX(Component.RIGHT_ALIGNMENT);
 
-        // 🛠️ INYECCIÓN DEL ÍCONO SVG DE ENVIAR (Y le quitamos el texto)
         JButton btnComentar = new JButton("");
         btnComentar.setIcon(cargarIcono("/icons/enviar.svg", 22, 22));
-        btnComentar.setToolTipText("Enviar transmisión"); // Mensaje al dejar el mouse encima
+        btnComentar.setToolTipText("Enviar transmisión");
         btnComentar.setBackground(acentoVerde);
         btnComentar.setFocusPainted(false);
         btnComentar.setBorderPainted(false);
         btnComentar.setAlignmentX(Component.RIGHT_ALIGNMENT);
         btnComentar.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnComentar.setBorder(new EmptyBorder(8, 15, 8, 15)); // Un poco de margen para que se vea bien como botón
+        btnComentar.setBorder(new EmptyBorder(8, 15, 8, 15));
 
         txtNuevoComentario.addKeyListener(new java.awt.event.KeyAdapter() {
+            @Override
             public void keyReleased(java.awt.event.KeyEvent evt) {
                 int len = txtNuevoComentario.getText().length();
                 if (len > 512) {
@@ -358,8 +368,13 @@ public class DetalleArticuloFrame extends JFrame {
                 try {
                     List<ComentarioDTO> comentarios = get();
                     mostrarComentarios(comentarios);
-                } catch (Exception e) {
-                    System.err.println("Error cargando comentarios: " + e.getMessage());
+                } catch (InterruptedException ie) { // 🛠️ Corregido: Manejo de Hilos
+                    Thread.currentThread().interrupt();
+                    logger.log(Level.SEVERE, "Hilo de carga de comentarios interrumpido", ie);
+                } catch (ExecutionException ee) {
+                    logger.log(Level.SEVERE, "Error ejecutando la carga de comentarios", ee);
+                } catch (RuntimeException re) {
+                    logger.log(Level.SEVERE, "Error interno en los comentarios", re);
                 }
             }
         };
@@ -371,7 +386,7 @@ public class DetalleArticuloFrame extends JFrame {
 
         if (comentarios == null || comentarios.isEmpty()) {
             JLabel lblSinComentarios = new JLabel("No hay comentarios aún. ¡Sé el primero en comentar!");
-            lblSinComentarios.setFont(new Font("Segoe UI", Font.ITALIC, 13));
+            lblSinComentarios.setFont(new Font(FONT_SEGOE, Font.ITALIC, 13));
             lblSinComentarios.setForeground(textoGris);
             lblSinComentarios.setAlignmentX(Component.LEFT_ALIGNMENT);
             panelComentariosContenedor.add(lblSinComentarios);
@@ -400,13 +415,13 @@ public class DetalleArticuloFrame extends JFrame {
         panelHeaderComentario.setMaximumSize(new Dimension(Integer.MAX_VALUE, 25));
 
         JLabel lblUser = new JLabel(usuario);
-        lblUser.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        lblUser.setFont(new Font(FONT_SEGOE, Font.BOLD, 12));
         lblUser.setForeground(acentoVerde);
         panelHeaderComentario.add(lblUser, BorderLayout.WEST);
 
         if ("administrador".equalsIgnoreCase(rolUsuarioActual)) {
             JButton btnBorrar = new JButton("X");
-            btnBorrar.setFont(new Font("Segoe UI", Font.BOLD, 12));
+            btnBorrar.setFont(new Font(FONT_SEGOE, Font.BOLD, 12));
             btnBorrar.setBackground(acentoRojo);
             btnBorrar.setForeground(Color.WHITE);
 
@@ -424,7 +439,7 @@ public class DetalleArticuloFrame extends JFrame {
         }
 
         JTextArea txtMensaje = new JTextArea(comentario.getContenido());
-        txtMensaje.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        txtMensaje.setFont(new Font(FONT_SEGOE, Font.PLAIN, 13));
         txtMensaje.setForeground(textoClaro);
         txtMensaje.setBackground(panelSecundario);
         txtMensaje.setEditable(false);
@@ -448,7 +463,7 @@ public class DetalleArticuloFrame extends JFrame {
         if (confirmar == JOptionPane.YES_OPTION) {
             try {
                 ComentarioClient client = RetrofitClient.getClient().create(ComentarioClient.class);
-                String bearerToken = "Bearer " + tokenUsuario;
+                String bearerToken = PREFIJO_BEARER + tokenUsuario;
 
                 client.eliminarComentario(idComentario, bearerToken).enqueue(new Callback<Void>() {
                     @Override
@@ -456,17 +471,18 @@ public class DetalleArticuloFrame extends JFrame {
                         if (response.isSuccessful()) {
                             cargarComentarios();
                         } else {
-                            JOptionPane.showMessageDialog(DetalleArticuloFrame.this, "Error del servidor al borrar.", "Error", JOptionPane.ERROR_MESSAGE);
+                            JOptionPane.showMessageDialog(DetalleArticuloFrame.this, "Error del servidor al borrar.", TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                         }
                     }
 
                     @Override
                     public void onFailure(Call<Void> call, Throwable t) {
-                        JOptionPane.showMessageDialog(DetalleArticuloFrame.this, "Fallo de red: " + t.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(DetalleArticuloFrame.this, "Fallo de red: " + t.getMessage(), TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                     }
                 });
-            } catch (Exception e) {
-                JOptionPane.showMessageDialog(this, "Error interno de la aplicación.", "Error", JOptionPane.ERROR_MESSAGE);
+            } catch (RuntimeException e) {
+                logger.log(Level.SEVERE, "Fallo interno al intentar borrar el comentario", e);
+                JOptionPane.showMessageDialog(this, "Error interno de la aplicación.", TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
             }
         }
     }
@@ -474,7 +490,7 @@ public class DetalleArticuloFrame extends JFrame {
     private void enviarComentario(JTextArea txtComentario, JButton btnEnviar) {
         String contenido = txtComentario.getText().trim();
 
-        if (contenido.isEmpty() || contenido.equals("Escribe una transmisión pública...")) {
+        if (contenido.isEmpty() || contenido.equals(TXT_PLACEHOLDER_COMENTARIO)) {
             JOptionPane.showMessageDialog(this, "El comentario no puede estar vacío", "Validación", JOptionPane.WARNING_MESSAGE);
             return;
         }
@@ -484,7 +500,6 @@ public class DetalleArticuloFrame extends JFrame {
             return;
         }
 
-        // 🛠️ Ahora solo desactivamos el botón (Se pondrá gris automáticamente) en lugar de cambiarle el texto
         btnEnviar.setEnabled(false);
 
         SwingWorker<Void, Void> worker = new SwingWorker<>() {
@@ -492,7 +507,7 @@ public class DetalleArticuloFrame extends JFrame {
             protected Void doInBackground() throws Exception {
                 ComentarioClient client = RetrofitClient.getClient().create(ComentarioClient.class);
                 ComentarioRequest request = new ComentarioRequest(contenido);
-                String bearerToken = "Bearer " + tokenUsuario;
+                String bearerToken = PREFIJO_BEARER + tokenUsuario;
 
                 Call<com.metroidwiki.model.ComentarioResponse> call = client.crearComentario(
                         articulo.getId(),
@@ -503,7 +518,7 @@ public class DetalleArticuloFrame extends JFrame {
                 Response<com.metroidwiki.model.ComentarioResponse> response = call.execute();
 
                 if (!response.isSuccessful()) {
-                    throw new Exception("Error al crear comentario: " + response.code());
+                    throw new RuntimeException("Error al crear comentario: " + response.code()); // 🛠️ RuntimeException en lugar de genérica
                 }
 
                 return null;
@@ -511,7 +526,6 @@ public class DetalleArticuloFrame extends JFrame {
 
             @Override
             protected void done() {
-                // 🛠️ Volvemos a habilitar el botón cuando termine de procesar
                 btnEnviar.setEnabled(true);
 
                 try {
@@ -520,14 +534,16 @@ public class DetalleArticuloFrame extends JFrame {
                             "¡Comentario enviado con éxito!",
                             "Éxito",
                             JOptionPane.INFORMATION_MESSAGE);
-                    txtComentario.setText("Escribe una transmisión pública...");
+                    txtComentario.setText(TXT_PLACEHOLDER_COMENTARIO);
                     txtComentario.setForeground(textoGris);
                     cargarComentarios();
-                } catch (Exception e) {
-                    JOptionPane.showMessageDialog(DetalleArticuloFrame.this,
-                            "Error al enviar comentario: " + e.getMessage(),
-                            "Error",
-                            JOptionPane.ERROR_MESSAGE);
+                } catch (InterruptedException ie) { // 🛠️ Hilos y ejecución controlada
+                    Thread.currentThread().interrupt();
+                    JOptionPane.showMessageDialog(DetalleArticuloFrame.this, "Operación interrumpida.", TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
+                } catch (ExecutionException ee) {
+                    JOptionPane.showMessageDialog(DetalleArticuloFrame.this, "Error al enviar comentario: " + ee.getCause().getMessage(), TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
+                } catch (RuntimeException re) {
+                    JOptionPane.showMessageDialog(DetalleArticuloFrame.this, "Fallo interno al procesar el comentario.", TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                 }
             }
         };
@@ -545,7 +561,7 @@ public class DetalleArticuloFrame extends JFrame {
     private String extraerDatoDesdeToken(String token, String keyBuscada) {
         if (token == null || token.isEmpty()) return null;
         try {
-            String jwt = token.startsWith("Bearer ") ? token.substring(7) : token;
+            String jwt = token.startsWith(PREFIJO_BEARER) ? token.substring(7) : token;
             String[] partes = jwt.split("\\.");
             if (partes.length < 2) return null;
 
@@ -566,7 +582,8 @@ public class DetalleArticuloFrame extends JFrame {
                 end++;
             }
             return payload.substring(start, end);
-        } catch (Exception e) {
+        } catch (IllegalArgumentException e) {
+            logger.log(Level.FINE, "Error decodificando token Base64", e);
             return null;
         }
     }
@@ -607,8 +624,16 @@ public class DetalleArticuloFrame extends JFrame {
                     } else {
                         lblIcono.setText("IMAGEN NO ENCONTRADA");
                     }
-                } catch (Exception e) {
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
                     lblIcono.setText("ERROR DE TRANSMISIÓN");
+                    logger.log(Level.SEVERE, "Hilo de imagen interrumpido", ie);
+                } catch (ExecutionException ee) {
+                    lblIcono.setText("ERROR DE TRANSMISIÓN");
+                    logger.log(Level.SEVERE, "Error ejecutando la descarga de imagen", ee);
+                } catch (RuntimeException re) {
+                    lblIcono.setText("ERROR DE TRANSMISIÓN");
+                    logger.log(Level.SEVERE, "Fallo interno en el renderizado", re);
                 }
             }
         };

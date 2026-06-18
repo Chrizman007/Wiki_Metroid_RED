@@ -9,7 +9,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
 
-// 🛠️ LIBRERÍAS DE gRPC Y RUTAS
+// LIBRERÍAS DE gRPC Y RUTAS
 const path = require('path');
 const fs = require('fs');
 const grpc = require('@grpc/grpc-js');
@@ -325,7 +325,6 @@ const ArticuloLogicService = {
       throw new CamposRequeridosFaltantesException(missingFields);
     }
 
-    // 🛠️ BLINDAJE: Forzamos la primera letra mayúscula para evitar el Error 500
     if (datos.categoria) {
       datos.categoria = datos.categoria.charAt(0).toUpperCase() + datos.categoria.slice(1).toLowerCase();
     }
@@ -334,7 +333,6 @@ const ArticuloLogicService = {
     return new ArticuloDTO(articuloGuardado);
   },
 
-  // 🛠️ NUEVO: Método de negocio para actualizar
   actualizarArticulo: async (id, datos) => {
     if (!mongoose.Types.ObjectId.isValid(id)) {
       throw new FormatoIdInvalidoException();
@@ -345,7 +343,6 @@ const ArticuloLogicService = {
       throw new DocumentoNoEncontradoException(id);
     }
 
-    // 🛠️ BLINDAJE: Normalizamos también al editar
     if (datos.categoria) {
       datos.categoria = datos.categoria.charAt(0).toUpperCase() + datos.categoria.slice(1).toLowerCase();
     }
@@ -579,7 +576,7 @@ const subirImagenHandler = (call, callback) => {
       });
 
     } catch (error) {
-      console.error("❌ Fallo en gRPC:", error);
+      console.error(" Fallo en gRPC:", error);
       callback({
         code: grpc.status.INTERNAL,
         message: `Error interno al guardar: ${error.message}`
@@ -620,7 +617,7 @@ async function startServer() {
     
     grpcServer.bindAsync('0.0.0.0:3003', grpc.ServerCredentials.createInsecure(), (err, port) => {
       if (err) {
-        console.error('❌ No se pudo arrancar el servidor gRPC:', err);
+        console.error('No se pudo arrancar el servidor gRPC:', err);
         return;
       }
       grpcServer.start();

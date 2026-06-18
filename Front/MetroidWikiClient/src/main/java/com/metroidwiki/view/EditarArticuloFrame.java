@@ -16,8 +16,17 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.File;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class EditarArticuloFrame extends JFrame {
+
+    private static final Logger logger = Logger.getLogger(EditarArticuloFrame.class.getName());
+
+    //CONSTANTES DE CLEAN CODE
+    private static final String FONT_SEGOE = "Segoe UI";
+    private static final String TITULO_ERROR = "Error";
+    private static final String TXT_BTN_ACTUALIZAR = "ACTUALIZAR ARTÍCULO";
 
     private final Color fondoPrincipal = new Color(25, 25, 28);
     private final Color panelSecundario = new Color(35, 35, 40);
@@ -35,10 +44,11 @@ public class EditarArticuloFrame extends JFrame {
     private JButton btnSeleccionarImagen;
     private JButton btnGuardar;
 
-    private String tokenJwt;
-    private ArticuloDTO articuloActual;
-    private File archivoImagenSeleccionado;
-    private AdminDashboardFrame dashboardAdmin;
+    // 🛠️ VARIABLES TRANSIENT PARA OBJETOS NO SERIALIZABLES
+    private transient String tokenJwt;
+    private transient ArticuloDTO articuloActual;
+    private transient File archivoImagenSeleccionado;
+    private transient AdminDashboardFrame dashboardAdmin;
 
     public EditarArticuloFrame(String token, ArticuloDTO articuloActual, AdminDashboardFrame dashboardAdmin) {
         this.tokenJwt = token;
@@ -47,14 +57,14 @@ public class EditarArticuloFrame extends JFrame {
 
         setTitle("Modificar Artículo - " + articuloActual.getTitulo());
         setSize(650, 800);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE); // 🛠️ Corregido a WindowConstants
         setLocationRelativeTo(null);
         getContentPane().setBackground(fondoPrincipal);
         setLayout(new BorderLayout(10, 10));
 
         // --- CABECERA ---
         JLabel lblTituloVentana = new JLabel("EDICIÓN DE REGISTRO CLASIFICADO", SwingConstants.CENTER);
-        lblTituloVentana.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTituloVentana.setFont(new Font(FONT_SEGOE, Font.BOLD, 20));
         lblTituloVentana.setForeground(acentoAmarillo);
         lblTituloVentana.setBorder(new EmptyBorder(15, 0, 10, 0));
         add(lblTituloVentana, BorderLayout.NORTH);
@@ -65,7 +75,7 @@ public class EditarArticuloFrame extends JFrame {
         panelFormulario.setBackground(fondoPrincipal);
         panelFormulario.setBorder(new EmptyBorder(10, 30, 10, 30));
 
-        Font fuenteLabel = new Font("Segoe UI", Font.BOLD, 14);
+        Font fuenteLabel = new Font(FONT_SEGOE, Font.BOLD, 14);
 
         // Título
         JLabel lblTitulo = new JLabel("Título del Artículo:");
@@ -80,7 +90,7 @@ public class EditarArticuloFrame extends JFrame {
         lblCategoria.setFont(fuenteLabel);
         String[] categorias = {"Lore", "Items", "Enemigos", "Ubicaciones", "Personajes"};
         cmbCategoria = new JComboBox<>(categorias);
-        estilizarComboBox(cmbCategoria); // 🛠️ APLICADO AQUÍ
+        estilizarComboBox(cmbCategoria);
         cmbCategoria.setSelectedItem(articuloActual.getCategoria());
 
         // ESTADO
@@ -89,7 +99,7 @@ public class EditarArticuloFrame extends JFrame {
         lblEstado.setFont(fuenteLabel);
         String[] estados = {"EnBorrador", "EnRevision", "Publicado", "Archivado"};
         cmbEstado = new JComboBox<>(estados);
-        estilizarComboBox(cmbEstado); // 🛠️ APLICADO AQUÍ
+        estilizarComboBox(cmbEstado);
         cmbEstado.setSelectedItem(articuloActual.getEstado() != null ? articuloActual.getEstado() : "EnBorrador");
 
         // Multimedia
@@ -107,7 +117,7 @@ public class EditarArticuloFrame extends JFrame {
         txtRutaImagen.setForeground(textoGris);
 
         btnSeleccionarImagen = new JButton("Cambiar...");
-        btnSeleccionarImagen.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnSeleccionarImagen.setFont(new Font(FONT_SEGOE, Font.BOLD, 12));
         btnSeleccionarImagen.setBackground(panelSecundario);
         btnSeleccionarImagen.setForeground(Color.WHITE);
         btnSeleccionarImagen.setFocusPainted(false);
@@ -160,8 +170,8 @@ public class EditarArticuloFrame extends JFrame {
         panelBotones.setBackground(fondoPrincipal);
         panelBotones.setBorder(new EmptyBorder(10, 0, 20, 0));
 
-        btnGuardar = new JButton("ACTUALIZAR ARTÍCULO");
-        btnGuardar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnGuardar = new JButton(TXT_BTN_ACTUALIZAR);
+        btnGuardar.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         btnGuardar.setBackground(acentoAmarillo);
         btnGuardar.setForeground(fondoPrincipal);
         btnGuardar.setPreferredSize(new Dimension(220, 40));
@@ -170,7 +180,7 @@ public class EditarArticuloFrame extends JFrame {
         btnGuardar.addActionListener(e -> enviarActualizacion());
 
         JButton btnCancelar = new JButton("Cancelar");
-        btnCancelar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnCancelar.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         btnCancelar.setBackground(new Color(100, 100, 100));
         btnCancelar.setForeground(Color.WHITE);
         btnCancelar.setPreferredSize(new Dimension(120, 40));
@@ -187,7 +197,7 @@ public class EditarArticuloFrame extends JFrame {
         campo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         campo.setBackground(panelSecundario);
         campo.setForeground(Color.WHITE);
-        campo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        campo.setFont(new Font(FONT_SEGOE, Font.PLAIN, 14));
         campo.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         campo.setAlignmentX(Component.LEFT_ALIGNMENT);
     }
@@ -195,23 +205,20 @@ public class EditarArticuloFrame extends JFrame {
     private void estilizarTextArea(JTextArea area) {
         area.setBackground(panelSecundario);
         area.setForeground(Color.WHITE);
-        area.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        area.setFont(new Font(FONT_SEGOE, Font.PLAIN, 14));
         area.setLineWrap(true);
         area.setWrapStyleWord(true);
         area.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         area.setAlignmentX(Component.LEFT_ALIGNMENT);
     }
 
-    // 🛠️ MÉTODO ESTILIZADOR CORREGIDO (Fondo Negro, Letras Verdes)
     private void estilizarComboBox(JComboBox<String> combo) {
         combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        combo.setBackground(Color.BLACK); // 🛠️ Fondo Negro absoluto
-        combo.setForeground(acentoVerde); // 🛠️ Letras Verdes
-        combo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        combo.setBackground(Color.BLACK);
+        combo.setForeground(acentoVerde);
+        combo.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         combo.setAlignmentX(Component.LEFT_ALIGNMENT);
         combo.setOpaque(true);
-
-        // ⚠️ Se eliminó la línea "combo.setUI(new BasicComboBoxUI())"
 
         combo.setRenderer(new DefaultListCellRenderer() {
             @Override
@@ -220,7 +227,7 @@ public class EditarArticuloFrame extends JFrame {
 
                 if (isSelected) {
                     item.setBackground(acentoVerde);
-                    item.setForeground(Color.BLACK); // Texto negro al seleccionarlo
+                    item.setForeground(Color.BLACK);
                 } else {
                     item.setBackground(Color.BLACK);
                     item.setForeground(acentoVerde);
@@ -285,20 +292,21 @@ public class EditarArticuloFrame extends JFrame {
                         }
                     } else {
                         btnGuardar.setEnabled(true);
-                        btnGuardar.setText("ACTUALIZAR ARTÍCULO");
-                        JOptionPane.showMessageDialog(EditarArticuloFrame.this, "Error del servidor: " + response.code(), "Error", JOptionPane.ERROR_MESSAGE);
+                        btnGuardar.setText(TXT_BTN_ACTUALIZAR);
+                        JOptionPane.showMessageDialog(EditarArticuloFrame.this, "Error del servidor: " + response.code(), TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                     }
                 }
 
                 @Override
                 public void onFailure(Call<ArticuloResponse> call, Throwable t) {
                     btnGuardar.setEnabled(true);
-                    btnGuardar.setText("ACTUALIZAR ARTÍCULO");
-                    JOptionPane.showMessageDialog(EditarArticuloFrame.this, "Fallo de red: " + t.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    btnGuardar.setText(TXT_BTN_ACTUALIZAR);
+                    JOptionPane.showMessageDialog(EditarArticuloFrame.this, "Fallo de red: " + t.getMessage(), TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                 }
             });
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error interno en la aplicación.", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (RuntimeException e) {
+            logger.log(Level.SEVERE, "Fallo interno al ejecutar actualización REST", e);
+            JOptionPane.showMessageDialog(this, "Error interno en la aplicación.", TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
         }
     }
 
@@ -321,8 +329,9 @@ public class EditarArticuloFrame extends JFrame {
                     });
                 }
             });
-        } catch (Exception ex) {
-            JOptionPane.showMessageDialog(this, "Error al conectar gRPC.", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (RuntimeException ex) {
+            logger.log(Level.SEVERE, "Error al instanciar o invocar cliente gRPC", ex);
+            JOptionPane.showMessageDialog(this, "Error al conectar gRPC.", TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
             dispose();
         }
     }

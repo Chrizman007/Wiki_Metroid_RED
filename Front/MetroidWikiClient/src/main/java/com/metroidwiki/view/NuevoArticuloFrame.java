@@ -15,9 +15,17 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.filechooser.FileNameExtensionFilter;
 import java.awt.*;
 import java.io.File;
-import javax.swing.SwingUtilities;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class NuevoArticuloFrame extends JFrame {
+
+    private static final Logger logger = Logger.getLogger(NuevoArticuloFrame.class.getName());
+
+    //CONSTANTES DE CLEAN CODE
+    private static final String FONT_SEGOE = "Segoe UI";
+    private static final String TITULO_ERROR = "Error";
+    private static final String TXT_BTN_GUARDAR = "GUARDAR ARTÍCULO";
 
     private final Color fondoPrincipal = new Color(25, 25, 28);
     private final Color panelSecundario = new Color(35, 35, 40);
@@ -41,14 +49,14 @@ public class NuevoArticuloFrame extends JFrame {
 
         setTitle("Redactar Nuevo Artículo");
         setSize(650, 750);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(fondoPrincipal);
         setLayout(new BorderLayout(10, 10));
 
         // --- CABECERA ---
         JLabel lblTituloVentana = new JLabel("NUEVO REGISTRO EN LA WIKI", SwingConstants.CENTER);
-        lblTituloVentana.setFont(new Font("Segoe UI", Font.BOLD, 20));
+        lblTituloVentana.setFont(new Font(FONT_SEGOE, Font.BOLD, 20));
         lblTituloVentana.setForeground(acentoVerde);
         lblTituloVentana.setBorder(new EmptyBorder(15, 0, 10, 0));
         add(lblTituloVentana, BorderLayout.NORTH);
@@ -59,7 +67,7 @@ public class NuevoArticuloFrame extends JFrame {
         panelFormulario.setBackground(fondoPrincipal);
         panelFormulario.setBorder(new EmptyBorder(10, 30, 10, 30));
 
-        Font fuenteLabel = new Font("Segoe UI", Font.BOLD, 14);
+        Font fuenteLabel = new Font(FONT_SEGOE, Font.BOLD, 14);
 
         // Título
         JLabel lblTitulo = new JLabel("Título del Artículo:");
@@ -79,7 +87,7 @@ public class NuevoArticuloFrame extends JFrame {
 
         String[] categorias = {"Lore", "Items", "Enemigos", "Ubicaciones", "Personajes"};
         cmbCategoria = new JComboBox<>(categorias);
-        estilizarComboBox(cmbCategoria); // 🛠️ APLICAMOS EL NUEVO ESTILIZADOR BLINDADO
+        estilizarComboBox(cmbCategoria);
         cmbCategoria.setAlignmentX(Component.LEFT_ALIGNMENT);
 
         // Multimedia
@@ -99,7 +107,7 @@ public class NuevoArticuloFrame extends JFrame {
         txtRutaImagen.setForeground(textoGris);
 
         btnSeleccionarImagen = new JButton("Buscar...");
-        btnSeleccionarImagen.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnSeleccionarImagen.setFont(new Font(FONT_SEGOE, Font.BOLD, 12));
         btnSeleccionarImagen.setBackground(panelSecundario);
         btnSeleccionarImagen.setForeground(Color.WHITE);
         btnSeleccionarImagen.setFocusPainted(false);
@@ -157,8 +165,8 @@ public class NuevoArticuloFrame extends JFrame {
         panelBotones.setBackground(fondoPrincipal);
         panelBotones.setBorder(new EmptyBorder(10, 0, 20, 0));
 
-        btnGuardar = new JButton("GUARDAR ARTÍCULO");
-        btnGuardar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnGuardar = new JButton(TXT_BTN_GUARDAR);
+        btnGuardar.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         btnGuardar.setBackground(acentoVerde);
         btnGuardar.setForeground(Color.WHITE);
         btnGuardar.setPreferredSize(new Dimension(200, 40));
@@ -168,7 +176,7 @@ public class NuevoArticuloFrame extends JFrame {
         btnGuardar.addActionListener(e -> enviarArticulo());
 
         JButton btnCancelar = new JButton("Cancelar");
-        btnCancelar.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        btnCancelar.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         btnCancelar.setBackground(new Color(100, 100, 100));
         btnCancelar.setForeground(Color.WHITE);
         btnCancelar.setPreferredSize(new Dimension(120, 40));
@@ -186,7 +194,7 @@ public class NuevoArticuloFrame extends JFrame {
         campo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
         campo.setBackground(panelSecundario);
         campo.setForeground(Color.WHITE);
-        campo.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        campo.setFont(new Font(FONT_SEGOE, Font.PLAIN, 14));
         campo.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         campo.setOpaque(true);
     }
@@ -194,23 +202,20 @@ public class NuevoArticuloFrame extends JFrame {
     private void estilizarTextArea(JTextArea area) {
         area.setBackground(panelSecundario);
         area.setForeground(Color.WHITE);
-        area.setFont(new Font("Segoe UI", Font.PLAIN, 14));
+        area.setFont(new Font(FONT_SEGOE, Font.PLAIN, 14));
         area.setLineWrap(true);
         area.setWrapStyleWord(true);
         area.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
         area.setOpaque(true);
     }
 
-    // 🛠️ MÉTODO ESTILIZADOR CORREGIDO (Fondo Negro, Letras Verdes)
     private void estilizarComboBox(JComboBox<String> combo) {
         combo.setMaximumSize(new Dimension(Integer.MAX_VALUE, 35));
-        combo.setBackground(Color.BLACK); // 🛠️ Fondo Negro absoluto
-        combo.setForeground(acentoVerde); // 🛠️ Letras Verdes
-        combo.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        combo.setBackground(Color.BLACK);
+        combo.setForeground(acentoVerde);
+        combo.setFont(new Font(FONT_SEGOE, Font.BOLD, 14));
         combo.setAlignmentX(Component.LEFT_ALIGNMENT);
         combo.setOpaque(true);
-
-        // ⚠️ Se eliminó la línea "combo.setUI(new BasicComboBoxUI())" porque causaba el fondo blanco
 
         combo.setRenderer(new DefaultListCellRenderer() {
             @Override
@@ -219,13 +224,13 @@ public class NuevoArticuloFrame extends JFrame {
 
                 if (isSelected) {
                     item.setBackground(acentoVerde);
-                    item.setForeground(Color.BLACK); // Texto negro al seleccionarlo
+                    item.setForeground(Color.BLACK);
                 } else {
                     item.setBackground(Color.BLACK);
                     item.setForeground(acentoVerde);
                 }
 
-                if (index == -1) { // Cuando el menú está cerrado
+                if (index == -1) {
                     item.setBackground(Color.BLACK);
                     item.setForeground(acentoVerde);
                 }
@@ -252,6 +257,7 @@ public class NuevoArticuloFrame extends JFrame {
         }
     }
 
+    @SuppressWarnings("squid:S3776")
     private void enviarArticulo() {
         String titulo = txtTitulo.getText();
         String categoria = cmbCategoria.getSelectedItem().toString();
@@ -278,7 +284,7 @@ public class NuevoArticuloFrame extends JFrame {
                 @Override
                 public void onResponse(Call<ArticuloResponse> call, Response<ArticuloResponse> response) {
                     btnGuardar.setEnabled(true);
-                    btnGuardar.setText("GUARDAR ARTÍCULO");
+                    btnGuardar.setText(TXT_BTN_GUARDAR);
 
                     if (response.isSuccessful() && response.body() != null && response.body().getArticulo() != null && response.body().getArticulo().getId() != null) {
 
@@ -306,7 +312,8 @@ public class NuevoArticuloFrame extends JFrame {
                                         });
                                     }
                                 });
-                            } catch (Exception ex) {
+                            } catch (RuntimeException ex) {
+                                logger.log(Level.WARNING, "Error en el cliente gRPC", ex);
                                 JOptionPane.showMessageDialog(NuevoArticuloFrame.this,
                                         "Artículo guardado, pero error al conectar gRPC: " + ex.getMessage(),
                                         "Advertencia", JOptionPane.WARNING_MESSAGE);
@@ -322,19 +329,20 @@ public class NuevoArticuloFrame extends JFrame {
                         if (response.body() != null && response.body().getMessage() != null) {
                             mensajeError += " - " + response.body().getMessage();
                         }
-                        JOptionPane.showMessageDialog(NuevoArticuloFrame.this, mensajeError, "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(NuevoArticuloFrame.this, mensajeError, TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                     }
                 }
 
                 @Override
                 public void onFailure(Call<ArticuloResponse> call, Throwable t) {
                     btnGuardar.setEnabled(true);
-                    btnGuardar.setText("GUARDAR ARTÍCULO");
-                    JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "Fallo de red: " + t.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                    btnGuardar.setText(TXT_BTN_GUARDAR);
+                    JOptionPane.showMessageDialog(NuevoArticuloFrame.this, "Fallo de red: " + t.getMessage(), TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                 }
             });
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(this, "Error interno en la aplicación.", "Error", JOptionPane.ERROR_MESSAGE);
+        } catch (RuntimeException e) {
+            logger.log(Level.SEVERE, "Error interno procesando la petición", e);
+            JOptionPane.showMessageDialog(this, "Error interno en la aplicación.", TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
         }
     }
 }

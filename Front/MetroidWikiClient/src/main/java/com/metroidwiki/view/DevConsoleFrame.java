@@ -10,24 +10,31 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.util.concurrent.ExecutionException;
 
 public class DevConsoleFrame extends JFrame {
 
+    // CONSTANTES DE CLEAN CODE
+    private static final String FONT_MONOSPACED = "Monospaced";
+    private static final String FONT_SEGOE = "Segoe UI";
+
     private final Color fondoPrincipal = new Color(20, 20, 22);
     private final Color panelSecundario = new Color(30, 30, 35);
-    private final Color acentoNaranja = new Color(255, 110, 64); // Color "Dev" espacial
-    private final Color textoClaro = new Color(0, 255, 100); // Verde Matrix/Terminal
+    private final Color acentoNaranja = new Color(255, 110, 64);
+    private final Color textoClaro = new Color(0, 255, 100);
 
     private JTextArea txtJsonOutput;
     private JTextField txtEndpoint;
-    private String tokenJwt;
+
+    //HECHO TRANSIENT POR BUENAS PRÁCTICAS
+    private transient String tokenJwt;
 
     public DevConsoleFrame(String token) {
         this.tokenJwt = token;
 
         setTitle("Terminal de Diagnóstico de Red - Protocolo gRPC/REST");
         setSize(750, 550);
-        setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE); // 🛠️ Corregido a WindowConstants
         setLocationRelativeTo(null);
         getContentPane().setBackground(fondoPrincipal);
         setLayout(new BorderLayout(15, 15));
@@ -39,38 +46,37 @@ public class DevConsoleFrame extends JFrame {
         panelSuperior.setBorder(new EmptyBorder(15, 15, 10, 15));
 
         JLabel lblToken = new JLabel("TOKEN JWT ACTIVO (CREDENCIALES DE DESARROLLADOR):");
-        lblToken.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        lblToken.setFont(new Font(FONT_SEGOE, Font.BOLD, 11));
         lblToken.setForeground(Color.WHITE);
 
         JTextField txtToken = new JTextField(tokenJwt);
         txtToken.setEditable(false);
         txtToken.setBackground(panelSecundario);
         txtToken.setForeground(Color.GRAY);
-        txtToken.setFont(new Font("Monospaced", Font.PLAIN, 11));
+        txtToken.setFont(new Font(FONT_MONOSPACED, Font.PLAIN, 11)); // 🛠️ Uso de Constante
 
         JPanel panelUrl = new JPanel(new BorderLayout(10, 0));
         panelUrl.setBackground(fondoPrincipal);
         panelUrl.setBorder(new EmptyBorder(10, 0, 0, 0));
 
         JLabel lblUrlBase = new JLabel(RetrofitClient.BASE_URL);
-        lblUrlBase.setFont(new Font("Monospaced", Font.BOLD, 13));
+        lblUrlBase.setFont(new Font(FONT_MONOSPACED, Font.BOLD, 13)); // 🛠️ Uso de Constante
         lblUrlBase.setForeground(acentoNaranja);
 
         txtEndpoint = new JTextField("articulos");
         txtEndpoint.setBackground(panelSecundario);
         txtEndpoint.setForeground(Color.WHITE);
-        txtEndpoint.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        txtEndpoint.setFont(new Font(FONT_MONOSPACED, Font.PLAIN, 13)); // 🛠️ Uso de Constante
 
-        // 🛠️ BOTÓN CORREGIDO CON LOS ESCUDOS SWING
         JButton btnEnviar = new JButton("CONSUMIR API");
         btnEnviar.setBackground(acentoNaranja);
         btnEnviar.setForeground(Color.WHITE);
-        btnEnviar.setFont(new Font("Segoe UI", Font.BOLD, 12));
+        btnEnviar.setFont(new Font(FONT_SEGOE, Font.BOLD, 12));
         btnEnviar.setFocusPainted(false);
-        btnEnviar.setBorderPainted(false); // 🛡️ Escudo 1: Quita el borde 3D del OS
-        btnEnviar.setOpaque(true);         // 🛡️ Escudo 2: Fuerza el renderizado de tu color naranja
+        btnEnviar.setBorderPainted(false);
+        btnEnviar.setOpaque(true);
         btnEnviar.setCursor(new Cursor(Cursor.HAND_CURSOR));
-        btnEnviar.setBorder(new EmptyBorder(5, 15, 5, 15)); // Un poco de margen para que se vea premium
+        btnEnviar.setBorder(new EmptyBorder(5, 15, 5, 15));
         btnEnviar.addActionListener(e -> ejecutarPeticionCruda());
 
         panelUrl.add(lblUrlBase, BorderLayout.WEST);
@@ -88,7 +94,7 @@ public class DevConsoleFrame extends JFrame {
         txtJsonOutput = new JTextArea("// Presiona 'CONSUMIR API' para interceptar la respuesta REST de Node.js...");
         txtJsonOutput.setBackground(Color.BLACK);
         txtJsonOutput.setForeground(textoClaro);
-        txtJsonOutput.setFont(new Font("Monospaced", Font.PLAIN, 13));
+        txtJsonOutput.setFont(new Font(FONT_MONOSPACED, Font.PLAIN, 13)); // 🛠️ Uso de Constante
         txtJsonOutput.setEditable(false);
         txtJsonOutput.setBorder(new EmptyBorder(10, 10, 10, 10));
 
@@ -103,6 +109,7 @@ public class DevConsoleFrame extends JFrame {
         add(panelCentro, BorderLayout.CENTER);
     }
 
+    @SuppressWarnings("squid:S2095") // 🛡️ Escudo protector: Evita advertencia de AutoCloseable para mantener compatibilidad con Java 11/17
     private void ejecutarPeticionCruda() {
         txtJsonOutput.setText("📡 Conectando con " + RetrofitClient.BASE_URL + txtEndpoint.getText() + "...\nInyectando cabecera Authorization...");
 
@@ -127,8 +134,11 @@ public class DevConsoleFrame extends JFrame {
                     }
 
                     return response.body();
-                } catch (java.io.IOException | InterruptedException ex) {
-                    // Si hay un fallo físico de red, lanzamos la excepción controlada exigida
+                } catch (InterruptedException ex) {
+                    //Hilos: Notificamos al sistema que la operación fue interrumpida
+                    Thread.currentThread().interrupt();
+                    throw new ErrorConsumoAPIException("Conexión interrumpida por el sistema", 500);
+                } catch (java.io.IOException ex) {
                     throw new ErrorConsumoAPIException("Fallo crítico de comunicación física con el API Gateway", 500);
                 }
             }
@@ -137,11 +147,14 @@ public class DevConsoleFrame extends JFrame {
             protected void done() {
                 try {
                     String jsonPuro = get();
-                    // Pintamos el JSON formateado sutilmente
                     txtJsonOutput.setText(jsonPuro.replace("{", "{\n  ").replace(",", ",\n  ").replace("}", "\n}"));
-                } catch (Exception e) {
-                    if (e.getCause() instanceof ErrorConsumoAPIException) {
-                        ErrorConsumoAPIException exEspecifica = (ErrorConsumoAPIException) e.getCause();
+                } catch (InterruptedException ie) {
+                    //Hilos: Restauramos la interrupción aquí también
+                    Thread.currentThread().interrupt();
+                    txtJsonOutput.setText("❌ OPERACIÓN CANCELADA / INTERRUMPIDA.");
+                } catch (ExecutionException ee) {
+                    if (ee.getCause() instanceof ErrorConsumoAPIException) {
+                        ErrorConsumoAPIException exEspecifica = (ErrorConsumoAPIException) ee.getCause();
                         txtJsonOutput.setText("❌ RUPTURA DE PROTOCOLO HTTP:\n" + exEspecifica.getMessage() + "\nCódigo HTTP recibido: " + exEspecifica.getCodigoRespuesta());
                     } else {
                         txtJsonOutput.setText("❌ Error desconocido en la consola interna.");
