@@ -21,7 +21,7 @@ import java.util.logging.Logger;
 public class GrpcMediaClient {
 
     private static final Logger logger = Logger.getLogger(GrpcMediaClient.class.getName());
-    private static final String IP_AWS = "10.165.25.125";
+    private static final String IP_AWS = "18.224.252.1";
     private static final int PUERTO_GRPC = 50051;
 
     public interface UploadListener {

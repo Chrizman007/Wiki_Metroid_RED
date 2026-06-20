@@ -6,29 +6,8 @@
   <component name="ChangeListManager">
     <list default="true" id="76729f87-e3b1-46f5-89c0-37e6991e75e2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ArticuloDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ArticuloDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ArticuloRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ArticuloRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ArticuloResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ArticuloResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ComentarioDTO.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ComentarioDTO.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ComentarioResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ComentarioResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ComentariosListResponse.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/ComentariosListResponse.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/LoginRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/LoginRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/RegistroRequest.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/model/RegistroRequest.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/ArticuloClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/ArticuloClient.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/ComentarioClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/ComentarioClient.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/GrpcMediaClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/GrpcMediaClient.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/RetrofitClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/RetrofitClient.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/AdminDashboardFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/AdminDashboardFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DetalleArticuloFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DetalleArticuloFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DevConsoleFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/DevConsoleFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/EditarArticuloFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/EditarArticuloFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/LoginFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/LoginFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/NuevoArticuloFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/NuevoArticuloFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/RegistroFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/RegistroFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/WikiMainFrame.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/view/WikiMainFrame.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/org/example/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/org/example/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/proto/media.proto" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/proto/media.proto" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/../../api/v1/servicios/articulos/proto/media.proto" beforeDir="false" afterPath="$PROJECT_DIR$/../../api/v1/servicios/articulos/proto/media.proto" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -108,7 +87,7 @@
       <workItem from="1781814031873" duration="9609000" />
       <workItem from="1781824562987" duration="713000" />
       <workItem from="1781892983631" duration="6066000" />
-      <workItem from="1781986389414" duration="3558000" />
+      <workItem from="1781986389414" duration="4908000" />
     </task>
     <servers />
   </component>

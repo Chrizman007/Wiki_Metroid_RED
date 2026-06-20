@@ -9,7 +9,7 @@ services:
       - ./servicios/articulos/.env
     ports:
       - '3001:3001'
-      - '3003:3003'
+      - '50051:50051'
     restart: unless-stopped
 
   usuarios:
