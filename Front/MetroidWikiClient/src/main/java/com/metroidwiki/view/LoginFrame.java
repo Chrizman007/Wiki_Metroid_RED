@@ -23,11 +23,9 @@ public class LoginFrame extends JFrame {
     private JButton btnLogin;
     private static final Logger logger = Logger.getLogger(LoginFrame.class.getName());
 
-    // Constantes extraídas para eliminar la redundancia (Clean Code)
     private static final String FONT_SEGOE = "Segoe UI";
     private static final String TITULO_ERROR = "Error";
 
-    // Colores del tema (Modo Oscuro Metroid)
     private final Color fondoOscuro = new Color(30, 30, 34);
     private final Color panelColor = new Color(45, 45, 50);
     private final Color textoClaro = new Color(230, 230, 230);
@@ -35,7 +33,6 @@ public class LoginFrame extends JFrame {
     private final Color enlaceColor = new Color(100, 200, 105);
 
     public LoginFrame() {
-        // 1. Configuración de la ventana
         setTitle("Metroid Wiki - Portal de Acceso");
         setSize(400, 440);
         setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
@@ -44,14 +41,12 @@ public class LoginFrame extends JFrame {
         getContentPane().setBackground(fondoOscuro);
         setLayout(new BorderLayout());
 
-        // 2. Título Superior
         JLabel lblTitulo = new JLabel("METROID WIKI", SwingConstants.CENTER);
         lblTitulo.setFont(new Font(FONT_SEGOE, Font.BOLD, 26));
         lblTitulo.setForeground(acentoVerde);
         lblTitulo.setBorder(new EmptyBorder(20, 0, 15, 0));
         add(lblTitulo, BorderLayout.NORTH);
 
-        // 3. Panel central (Formulario)
         JPanel panelCampos = new JPanel(new GridBagLayout());
         panelCampos.setBackground(panelColor);
 
@@ -73,7 +68,6 @@ public class LoginFrame extends JFrame {
         Font fuenteLabel = new Font(FONT_SEGOE, Font.BOLD, 14);
         Font fuenteInput = new Font(FONT_SEGOE, Font.PLAIN, 16);
 
-        // --- CORREO ---
         JLabel lblCorreo = new JLabel("Correo Electrónico:", SwingConstants.CENTER);
         lblCorreo.setForeground(textoClaro);
         lblCorreo.setFont(fuenteLabel);
@@ -83,7 +77,6 @@ public class LoginFrame extends JFrame {
         txtCorreo.setHorizontalAlignment(SwingConstants.CENTER); // Corregido: SwingConstants
         txtCorreo.setPreferredSize(new Dimension(200, 35));
 
-        // --- CONTRASEÑA ---
         JLabel lblPassword = new JLabel("Contraseña:", SwingConstants.CENTER);
         lblPassword.setForeground(textoClaro);
         lblPassword.setFont(fuenteLabel);
@@ -93,7 +86,6 @@ public class LoginFrame extends JFrame {
         txtPassword.setHorizontalAlignment(SwingConstants.CENTER); // Corregido: SwingConstants
         txtPassword.setPreferredSize(new Dimension(200, 35));
 
-        // --- CHECKBOX MOSTRAR CONTRASEÑA ---
         JCheckBox chkMostrar = new JCheckBox("Mostrar contraseña");
         chkMostrar.setBackground(panelColor);
         chkMostrar.setForeground(textoClaro);
@@ -108,7 +100,6 @@ public class LoginFrame extends JFrame {
             }
         });
 
-        // Acomodamos en la cuadrícula
         gbc.gridy = 0; panelCampos.add(lblCorreo, gbc);
         gbc.gridy = 1; panelCampos.add(txtCorreo, gbc);
         gbc.gridy = 2; panelCampos.add(lblPassword, gbc);
@@ -118,7 +109,6 @@ public class LoginFrame extends JFrame {
         panelContenedor.add(panelCampos, BorderLayout.CENTER);
         add(panelContenedor, BorderLayout.CENTER);
 
-        // 4. Panel inferior (Botón + Enlace de Registro)
         JPanel panelInferior = new JPanel();
         panelInferior.setLayout(new BoxLayout(panelInferior, BoxLayout.Y_AXIS));
         panelInferior.setBackground(fondoOscuro);
@@ -136,7 +126,6 @@ public class LoginFrame extends JFrame {
         btnLogin.setCursor(new Cursor(Cursor.HAND_CURSOR));
         btnLogin.addActionListener(e -> intentarLogin());
 
-        // --- ENLACE PARA CREAR CUENTA ---
         JLabel lblCrearCuenta = new JLabel("Crear cuenta nueva");
         lblCrearCuenta.setFont(new Font(FONT_SEGOE, Font.PLAIN, 13));
         lblCrearCuenta.setForeground(enlaceColor);
@@ -165,7 +154,6 @@ public class LoginFrame extends JFrame {
         panelEnlace.setMaximumSize(new Dimension(300, 30));
         panelEnlace.add(lblCrearCuenta);
 
-        // Agregamos elementos al panel inferior con espacios
         panelInferior.add(btnLogin);
         panelInferior.add(Box.createRigidArea(new Dimension(0, 15)));
         panelInferior.add(panelEnlace);
@@ -211,7 +199,6 @@ public class LoginFrame extends JFrame {
                         String nombreCazador = response.body().getNombre();
                         String rolCazador = response.body().getRol();
 
-                        // Reemplazo de System.out.println por Logger (¡Clean Code!)
                         logger.info("⚠️ DEBUG ROL DESDE NODE: " + rolCazador);
                         logger.info("TOKEN JWT RECIBIDO: " + token);
                         logger.info("CAZADOR CONECTADO: " + nombreCazador);

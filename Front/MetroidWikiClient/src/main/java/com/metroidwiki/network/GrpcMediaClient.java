@@ -1,5 +1,7 @@
 package com.metroidwiki.network;
 
+import com.metroidwiki.network.grpc.DescargaRequest;
+import com.metroidwiki.network.grpc.DescargaResponse;
 import com.metroidwiki.network.grpc.ImagenRequest;
 import com.metroidwiki.network.grpc.ImagenResponse;
 import com.metroidwiki.network.grpc.MediaServiceGrpc;
@@ -11,41 +13,46 @@ import io.grpc.stub.StreamObserver;
 import javax.swing.SwingUtilities;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class GrpcMediaClient {
 
+    private static final Logger logger = Logger.getLogger(GrpcMediaClient.class.getName());
+    private static final String IP_AWS = "10.165.25.125";
+    private static final int PUERTO_GRPC = 50051;
+
     public interface UploadListener {
-        void onSuccess(String urlImagen);
+        void onSuccess(String nombreArchivoSeguro);
+        void onError(Throwable t);
+    }
+
+    public interface DownloadListener {
+        void onSuccess(File archivoDescargado);
         void onError(Throwable t);
     }
 
     private final ManagedChannel channel;
-    // 🛠️ CAMBIO CLAVE: Usamos el Stub Asíncrono para no congelar la pantalla de Java
     private final MediaServiceGrpc.MediaServiceStub stubAsincrono;
 
     public GrpcMediaClient() {
-        channel = ManagedChannelBuilder.forAddress("localhost", 3003)
-                .usePlaintext() // Red local
+        channel = ManagedChannelBuilder.forAddress(IP_AWS, PUERTO_GRPC)
+                .usePlaintext()
                 .build();
         stubAsincrono = MediaServiceGrpc.newStub(channel);
-    }
-
-    // 🛠️ CAMBIO CLAVE: Método que pica la imagen en pedazos de 4KB (Stream)
-    public void subirImagenArticulo(String idArticulo, File archivoImagen) {
-        subirImagenArticulo(idArticulo, archivoImagen, null);
     }
 
     public void subirImagenArticulo(String idArticulo, File archivoImagen, UploadListener listener) {
         AtomicReference<String> urlImagenEnServidor = new AtomicReference<>(null);
 
-        // Preparamos el "oído" para escuchar lo que nos responda Node.js
-        StreamObserver<ImagenResponse> responseObserver = new StreamObserver<ImagenResponse>() {
+        StreamObserver<ImagenResponse> responseObserver = new StreamObserver<>() {
             @Override
             public void onNext(ImagenResponse response) {
                 urlImagenEnServidor.set(response.getUrlImagen());
-                System.out.println("✅ [gRPC] Node.js dice: " + response.getMensaje());
-                System.out.println("🔗 URL en el servidor: " + response.getUrlImagen());
+                logger.info("[gRPC] Node.js dice: " + response.getMensaje());
+                logger.info("Nombre guardado en BD: " + response.getUrlImagen());
                 if (listener != null) {
                     SwingUtilities.invokeLater(() -> listener.onSuccess(response.getUrlImagen()));
                 }
@@ -53,7 +60,7 @@ public class GrpcMediaClient {
 
             @Override
             public void onError(Throwable t) {
-                System.err.println("❌ [gRPC] Falló al enviar la imagen: " + t.getMessage());
+                logger.log(Level.SEVERE, "[gRPC] Falló al enviar la imagen", t);
                 if (listener != null) {
                     SwingUtilities.invokeLater(() -> listener.onError(t));
                 }
@@ -62,20 +69,18 @@ public class GrpcMediaClient {
 
             @Override
             public void onCompleted() {
-                System.out.println("🏁 [gRPC] Imagen subida exitosamente.");
+                logger.info("[gRPC] Subida finalizada.");
                 apagarCanal();
             }
         };
 
-        // Abrimos el tubo de envío hacia Node.js
         StreamObserver<ImagenRequest> requestObserver = stubAsincrono.subirImagen(responseObserver);
 
-        // Leemos el archivo físico de tu computadora y lo mandamos en pedacitos
         try (FileInputStream fis = new FileInputStream(archivoImagen)) {
-            byte[] buffer = new byte[4096]; // Pedacitos de 4 KB
+            byte[] buffer = new byte[4096];
             int bytesLeidos;
 
-            System.out.println("🚀 [gRPC] Enviando archivo: " + archivoImagen.getName());
+            logger.info("[gRPC] Enviando archivo: " + archivoImagen.getName());
 
             while ((bytesLeidos = fis.read(buffer)) != -1) {
                 ImagenRequest request = ImagenRequest.newBuilder()
@@ -84,18 +89,77 @@ public class GrpcMediaClient {
                         .setChunk(ByteString.copyFrom(buffer, 0, bytesLeidos))
                         .build();
 
-                requestObserver.onNext(request); // Disparamos el pedacito
+                requestObserver.onNext(request);
             }
 
-            requestObserver.onCompleted(); // Le decimos a Node.js "Ya terminé"
+            requestObserver.onCompleted();
 
         } catch (Exception e) {
             requestObserver.onError(e);
-            System.err.println("Error interno al leer el archivo: " + e.getMessage());
+            logger.log(Level.SEVERE, "Error interno al leer el archivo físico", e);
         }
     }
 
-    // Cerramos el canal cuando apagamos el cliente
+    public void descargarImagenArticulo(String nombreArchivo, String rutaDestinoLocal, DownloadListener listener) {
+        File archivoSalida = new File(rutaDestinoLocal, nombreArchivo);
+        File directorio = new File(rutaDestinoLocal);
+        if (!directorio.exists()) {
+            directorio.mkdirs();
+        }
+
+        DescargaRequest request = DescargaRequest.newBuilder()
+                .setNombreArchivo(nombreArchivo)
+                .build();
+
+        logger.info("[gRPC] Solicitando descarga de: " + nombreArchivo);
+
+        stubAsincrono.descargarImagen(request, new StreamObserver<>() {
+            FileOutputStream fos = null;
+
+            @Override
+            public void onNext(DescargaResponse response) {
+                try {
+                    if (fos == null) {
+                        fos = new FileOutputStream(archivoSalida);
+                    }
+                    fos.write(response.getChunk().toByteArray());
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, "Error al escribir chunk en disco local", e);
+                }
+            }
+
+            @Override
+            public void onError(Throwable t) {
+                logger.log(Level.SEVERE, "[gRPC] Falló al descargar la imagen", t);
+                cerrarStreamLocal();
+                if (listener != null) {
+                    SwingUtilities.invokeLater(() -> listener.onError(t));
+                }
+                apagarCanal();
+            }
+
+            @Override
+            public void onCompleted() {
+                cerrarStreamLocal();
+                logger.info("[gRPC] Imagen descargada exitosamente en: " + archivoSalida.getAbsolutePath());
+                if (listener != null) {
+                    SwingUtilities.invokeLater(() -> listener.onSuccess(archivoSalida));
+                }
+                apagarCanal();
+            }
+
+            private void cerrarStreamLocal() {
+                try {
+                    if (fos != null) {
+                        fos.close();
+                    }
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, "Error cerrando FileOutputStream local", e);
+                }
+            }
+        });
+    }
+
     public void apagarCanal() {
         if (channel != null && !channel.isShutdown()) {
             channel.shutdown();

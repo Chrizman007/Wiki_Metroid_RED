@@ -1,19 +1,20 @@
 syntax = "proto3";
 
-// Le decimos que genere los archivos en nuestra carpeta de red en Java
 option java_package = "com.metroidwiki.network.grpc";
 option java_multiple_files = true;
 
 package media;
 
-// Este es el servicio que está corriendo en tu Node.js en el puerto 50051
+
 service MediaService {
   rpc SubirImagen (stream ImagenRequest) returns (ImagenResponse);
+  
+  rpc DescargarImagen (DescargaRequest) returns (stream DescargaResponse);
 }
 
 message ImagenRequest {
   string articuloId = 1;
-  bytes chunk = 2; // Los pedazos de la imagen en bytes
+  bytes chunk = 2;
   string nombreArchivo = 3;
 }
 
@@ -21,4 +22,12 @@ message ImagenResponse {
   bool exito = 1;
   string mensaje = 2;
   string urlImagen = 3;
+}
+
+message DescargaRequest {
+  string nombreArchivo = 1;
+}
+
+message DescargaResponse {
+  bytes chunk = 1;
 }

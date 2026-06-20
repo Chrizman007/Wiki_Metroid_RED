@@ -9,7 +9,6 @@ public class LoginRequest {
         this.password = password;
     }
 
-    // Getters
     public String getCorreo() { return correo; }
     public String getPassword() { return password; }
 }

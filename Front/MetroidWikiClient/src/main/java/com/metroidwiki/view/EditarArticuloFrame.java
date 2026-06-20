@@ -23,7 +23,6 @@ public class EditarArticuloFrame extends JFrame {
 
     private static final Logger logger = Logger.getLogger(EditarArticuloFrame.class.getName());
 
-    //CONSTANTES DE CLEAN CODE
     private static final String FONT_SEGOE = "Segoe UI";
     private static final String TITULO_ERROR = "Error";
     private static final String TXT_BTN_ACTUALIZAR = "ACTUALIZAR ARTÍCULO";
@@ -44,7 +43,6 @@ public class EditarArticuloFrame extends JFrame {
     private JButton btnSeleccionarImagen;
     private JButton btnGuardar;
 
-    // 🛠️ VARIABLES TRANSIENT PARA OBJETOS NO SERIALIZABLES
     private transient String tokenJwt;
     private transient ArticuloDTO articuloActual;
     private transient File archivoImagenSeleccionado;
@@ -62,14 +60,12 @@ public class EditarArticuloFrame extends JFrame {
         getContentPane().setBackground(fondoPrincipal);
         setLayout(new BorderLayout(10, 10));
 
-        // --- CABECERA ---
         JLabel lblTituloVentana = new JLabel("EDICIÓN DE REGISTRO CLASIFICADO", SwingConstants.CENTER);
         lblTituloVentana.setFont(new Font(FONT_SEGOE, Font.BOLD, 20));
         lblTituloVentana.setForeground(acentoAmarillo);
         lblTituloVentana.setBorder(new EmptyBorder(15, 0, 10, 0));
         add(lblTituloVentana, BorderLayout.NORTH);
 
-        // --- FORMULARIO CENTRAL ---
         JPanel panelFormulario = new JPanel();
         panelFormulario.setLayout(new BoxLayout(panelFormulario, BoxLayout.Y_AXIS));
         panelFormulario.setBackground(fondoPrincipal);
@@ -77,14 +73,12 @@ public class EditarArticuloFrame extends JFrame {
 
         Font fuenteLabel = new Font(FONT_SEGOE, Font.BOLD, 14);
 
-        // Título
         JLabel lblTitulo = new JLabel("Título del Artículo:");
         lblTitulo.setForeground(textoClaro);
         lblTitulo.setFont(fuenteLabel);
         txtTitulo = new JTextField(articuloActual.getTitulo());
         estilizarInput(txtTitulo);
 
-        // Categoría
         JLabel lblCategoria = new JLabel("Categoría:");
         lblCategoria.setForeground(textoClaro);
         lblCategoria.setFont(fuenteLabel);
@@ -93,7 +87,6 @@ public class EditarArticuloFrame extends JFrame {
         estilizarComboBox(cmbCategoria);
         cmbCategoria.setSelectedItem(articuloActual.getCategoria());
 
-        // ESTADO
         JLabel lblEstado = new JLabel("Estado de Publicación:");
         lblEstado.setForeground(textoClaro);
         lblEstado.setFont(fuenteLabel);
@@ -102,7 +95,6 @@ public class EditarArticuloFrame extends JFrame {
         estilizarComboBox(cmbEstado);
         cmbEstado.setSelectedItem(articuloActual.getEstado() != null ? articuloActual.getEstado() : "EnBorrador");
 
-        // Multimedia
         JLabel lblMultimedia = new JLabel("Actualizar Archivo Multimedia (Opcional):");
         lblMultimedia.setForeground(textoClaro);
         lblMultimedia.setFont(fuenteLabel);
@@ -136,7 +128,6 @@ public class EditarArticuloFrame extends JFrame {
         JScrollPane scrollDesc = new JScrollPane(txtDescripcion);
         scrollDesc.setMaximumSize(new Dimension(Integer.MAX_VALUE, 80));
 
-        // Contenido
         JLabel lblContenido = new JLabel("Contenido / Lore:");
         lblContenido.setForeground(textoClaro);
         lblContenido.setFont(fuenteLabel);
@@ -144,7 +135,6 @@ public class EditarArticuloFrame extends JFrame {
         estilizarTextArea(txtContenido);
         JScrollPane scrollContenido = new JScrollPane(txtContenido);
 
-        // Ensamblado
         panelFormulario.add(lblTitulo); panelFormulario.add(Box.createRigidArea(new Dimension(0, 5)));
         panelFormulario.add(txtTitulo); panelFormulario.add(Box.createRigidArea(new Dimension(0, 15)));
 
@@ -165,7 +155,6 @@ public class EditarArticuloFrame extends JFrame {
 
         add(panelFormulario, BorderLayout.CENTER);
 
-        // --- BOTONES INFERIORES ---
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
         panelBotones.setBackground(fondoPrincipal);
         panelBotones.setBorder(new EmptyBorder(10, 0, 20, 0));

@@ -5,7 +5,7 @@ public class ComentarioResponse {
     private ComentarioDTO comentario;
 
     public ComentarioResponse() {
-        // Constructor vacío requerido obligatoriamente para la deserialización JSON de Retrofit
+
     }
 
     public String getMessage() { return message; }

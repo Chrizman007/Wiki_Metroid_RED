@@ -1,27 +1,24 @@
 package com.metroidwiki.view;
 
 import com.metroidwiki.network.RetrofitClient;
+import com.metroidwiki.network.GrpcMediaClient;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.net.URL;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 import java.util.logging.Logger;
 import java.util.logging.Level;
-import java.util.concurrent.ExecutionException;
 import com.formdev.flatlaf.extras.FlatSVGIcon;
 
 public class WikiMainFrame extends JFrame {
 
     private static final Logger logger = Logger.getLogger(WikiMainFrame.class.getName());
-
-    //CONSTANTES DE CLEAN CODE
     private static final String FONT_SEGOE = "Segoe UI";
     private static final String TXT_BUSCAR_WIKI = "Buscar en la Wiki...";
 
-    // Paleta de colores (Modo Oscuro Metroid)
+
     private final Color fondoPrincipal = new Color(25, 25, 28);
     private final Color fondoLateral = new Color(18, 18, 20);
     private final Color panelSecundario = new Color(35, 35, 40);
@@ -29,7 +26,6 @@ public class WikiMainFrame extends JFrame {
     private final Color textoClaro = new Color(230, 230, 230);
     private final Color textoGris = new Color(150, 150, 150);
 
-    //VARIABLES TRANSIENT PARA OBJETOS NO SERIALIZABLES
     private transient String tokenUsuarioActual;
     private transient String nombreUsuario;
     private transient String rolUsuario;
@@ -38,7 +34,6 @@ public class WikiMainFrame extends JFrame {
     private transient JPanel panelCategorias;
     private transient JPanel panelLateral;
 
-    // Memoria caché para no pedir a la BD cada vez que filtramos
     private transient List<com.metroidwiki.model.ArticuloDTO> listaArticulosCache = new ArrayList<>();
 
     public WikiMainFrame(String token, String nombreUsuario, String rolUsuario) {
@@ -48,14 +43,12 @@ public class WikiMainFrame extends JFrame {
 
         setTitle("Metroid Wiki - Archivos Centrales");
         setSize(1100, 750);
-        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE); // 🛠️ Corregido WindowConstants
+        setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
         setLocationRelativeTo(null);
         setLayout(new BorderLayout());
 
-        // 1. Barra Lateral
         add(crearBarraLateral(), BorderLayout.WEST);
 
-        // 2. Área Central
         JPanel panelContenido = new JPanel(new BorderLayout());
         panelContenido.setBackground(fondoPrincipal);
 
@@ -69,15 +62,11 @@ public class WikiMainFrame extends JFrame {
         try {
             String rutaLimpia = ruta.startsWith("/") ? ruta.substring(1) : ruta;
             return new FlatSVGIcon(rutaLimpia, width, height);
-        } catch (RuntimeException e) { // 🛠️ Excepción específica
-            logger.log(Level.SEVERE, "❌ Error cargando SVG " + ruta, e);
+        } catch (RuntimeException e) {
+            logger.log(Level.SEVERE, "Error cargando SVG " + ruta, e);
             return null;
         }
     }
-
-    // ==========================================
-    // 1. BARRA LATERAL (Con filtros y permisos)
-    // ==========================================
 
     private JPanel crearBarraLateral() {
         panelLateral = new JPanel();
@@ -282,7 +271,7 @@ public class WikiMainFrame extends JFrame {
                 List<com.metroidwiki.model.ArticuloDTO> resultados = listaArticulosCache.stream()
                         .filter(a -> a.getTitulo().toLowerCase().contains(query) ||
                                 a.getCategoria().toLowerCase().contains(query))
-                        .toList(); // 🛠️ Refactorizado a .toList()
+                        .toList();
                 renderizarGrid(resultados);
             }
         });
@@ -355,7 +344,7 @@ public class WikiMainFrame extends JFrame {
                     mostrarErrorGrid("Fallo de red al intentar contactar al servidor.");
                 }
             });
-        } catch (RuntimeException ex) { // 🛠️ Excepción específica de Red
+        } catch (RuntimeException ex) {
             logger.log(Level.SEVERE, "Fallo interno al ejecutar la petición de red", ex);
             mostrarErrorGrid("Error interno del sistema.");
         }
@@ -425,7 +414,7 @@ public class WikiMainFrame extends JFrame {
         panelImagen.setBackground(new Color(15, 15, 18));
         panelImagen.setPreferredSize(new Dimension(240, 150));
 
-        JLabel lblIcono = new JLabel("Cargando imagen...", SwingConstants.CENTER);
+        JLabel lblIcono = new JLabel("Descargando...", SwingConstants.CENTER);
         lblIcono.setFont(new Font(FONT_SEGOE, Font.ITALIC, 12));
         lblIcono.setForeground(textoGris);
         panelImagen.add(lblIcono, BorderLayout.CENTER);
@@ -515,55 +504,36 @@ public class WikiMainFrame extends JFrame {
             return;
         }
 
-        String nombreCodificado = nombreImagen.replace(" ", "%20");
-        String urlCompleta;
-        if (nombreImagen.startsWith("http://") || nombreImagen.startsWith("https://")) {
-            urlCompleta = nombreCodificado;
-        } else {
-            urlCompleta = RetrofitClient.BASE_URL + "articulos/public/imagenes/" + nombreCodificado;
-        }
+        String tempDir = System.getProperty("java.io.tmpdir") + File.separator + "metroidwiki_cache";
 
-        SwingWorker<ImageIcon, Void> worker = new SwingWorker<>() {
-            @Override
-            protected ImageIcon doInBackground() throws Exception {
-                URL url = new URL(urlCompleta);
-                java.awt.Image img = javax.imageio.ImageIO.read(url);
-                if (img != null) {
-                    java.awt.Image scaledImg = img.getScaledInstance(240, 150, java.awt.Image.SCALE_SMOOTH);
-                    return new ImageIcon(scaledImg);
-                }
-                return null;
-            }
+        GrpcMediaClient grpcClient = new GrpcMediaClient();
 
+        grpcClient.descargarImagenArticulo(nombreImagen, tempDir, new GrpcMediaClient.DownloadListener() {
             @Override
-            protected void done() {
+            public void onSuccess(File archivoDescargado) {
                 try {
-                    ImageIcon icono = get();
-                    if (icono != null) {
+                    java.awt.Image img = javax.imageio.ImageIO.read(archivoDescargado);
+                    if (img != null) {
+                        java.awt.Image scaledImg = img.getScaledInstance(240, 150, java.awt.Image.SCALE_SMOOTH);
                         lblIcono.setText("");
-                        lblIcono.setIcon(icono);
+                        lblIcono.setIcon(new ImageIcon(scaledImg));
                     } else {
                         lblIcono.setText("IMAGEN CORRUPTA");
                     }
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    lblIcono.setText("ERROR DE RED");
-                    logger.log(Level.SEVERE, "Hilo de imagen interrumpido", ie);
-                } catch (ExecutionException ee) {
-                    lblIcono.setText("ERROR DE RED");
-                    logger.log(Level.SEVERE, "Error ejecutando la descarga de imagen", ee);
-                } catch (RuntimeException re) {
-                    lblIcono.setText("ERROR DE RED");
-                    logger.log(Level.SEVERE, "Fallo interno en el renderizado de la imagen", re);
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, "Error al leer imagen temporal", e);
+                    lblIcono.setText("ERROR DE LECTURA");
                 }
             }
-        };
-        worker.execute();
+
+            @Override
+            public void onError(Throwable t) {
+                lblIcono.setText("ERROR gRPC");
+                logger.log(Level.WARNING, "El servidor gRPC no pudo enviar la imagen: " + nombreImagen);
+            }
+        });
     }
 
-    // ==========================================
-    // UTILIDADES
-    // ==========================================
 
     private JButton crearBotonMenu(String texto, boolean activo) {
         JButton boton = new JButton(texto);

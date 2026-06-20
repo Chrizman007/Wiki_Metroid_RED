@@ -2,8 +2,6 @@ const grpc = require('@grpc/grpc-js');
 const protoLoader = require('@grpc/proto-loader');
 const fs = require('fs');
 const path = require('path');
-
-// 1. Cargar el contrato .proto
 const PROTO_PATH = path.join(__dirname, 'media.proto');
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   keepCase: true,
@@ -12,51 +10,106 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
   defaults: true,
   oneofs: true
 });
-const mediaProto = grpc.loadPackageDefinition(packageDefinition).metroid_media;
 
-// 2. Ruta donde guardaremos los archivos multimedia
-const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'media');
+const mediaProto = grpc.loadPackageDefinition(packageDefinition).media;
+const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'imagenes');
 
-// 3. Lógica Estricta de Subida de Archivos
+if (!fs.existsSync(UPLOAD_DIR)) {
+    fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+}
+
 const subirImagen = (call, callback) => {
-  const { nombre_archivo, datos_imagen } = call.request;
+  let nombreArchivo = '';
+  let fileBuffer = [];
 
-  // Validación: Excepción específica si faltan datos
-  if (!nombre_archivo || !datos_imagen || datos_imagen.length === 0) {
-    return callback({
-      code: grpc.status.INVALID_ARGUMENT,
-      details: 'El nombre del archivo y los datos de la imagen son obligatorios.'
-    });
-  }
+  call.on('data', (request) => {
+    if (request.nombreArchivo && !nombreArchivo) {
+      nombreArchivo = request.nombreArchivo;
+    }
+    if (request.chunk) {
+      fileBuffer.push(request.chunk);
+    }
+  });
 
-  // Limpiar el nombre del archivo por seguridad (quitar espacios o caracteres raros)
-  const nombreSeguro = nombre_archivo.replace(/[^a-zA-Z0-9.\-_]/g, '_');
-  const rutaCompleta = path.join(UPLOAD_DIR, nombreSeguro);
-
-  // Escribir el archivo físico en la carpeta public/imagenes
-  fs.writeFile(rutaCompleta, datos_imagen, (error) => {
-    if (error) {
-      console.error('Error del sistema de archivos:', error);
-      // Excepción específica de sistema de archivos para gRPC
+  call.on('end', () => {
+    if (!nombreArchivo || fileBuffer.length === 0) {
       return callback({
-        code: grpc.status.INTERNAL,
-        details: `Fallo al escribir el archivo en el disco: ${error.message}`
+        code: grpc.status.INVALID_ARGUMENT,
+        details: 'El nombre del archivo y los datos son obligatorios.'
       });
     }
 
-    // Éxito: Devolvemos el DTO de respuesta
-    callback(null, {
-      exito: true,
-      mensaje: 'Imagen subida y guardada correctamente',
-      ruta_archivo: `/public/imagenes/${nombreSeguro}`
+    const nombreSeguro = nombreArchivo.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+    const rutaCompleta = path.join(UPLOAD_DIR, nombreSeguro);
+    const datosImagen = Buffer.concat(fileBuffer);
+
+    fs.writeFile(rutaCompleta, datosImagen, (error) => {
+      if (error) {
+        console.error('Error del sistema de archivos:', error);
+        return callback({
+          code: grpc.status.INTERNAL,
+          details: `Fallo al escribir el archivo: ${error.message}`
+        });
+      }
+
+      callback(null, {
+        exito: true,
+        mensaje: 'Imagen subida correctamente a AWS',
+        urlImagen: nombreSeguro
+      });
     });
   });
 };
 
-// 4. Iniciar el Servidor gRPC
+const descargarImagen = (call) => {
+  const nombreArchivo = call.request.nombreArchivo;
+
+  if (!nombreArchivo) {
+    call.emit('error', {
+      code: grpc.status.INVALID_ARGUMENT,
+      details: 'El nombre del archivo es obligatorio para descargar.'
+    });
+    return;
+  }
+
+  const nombreSeguro = nombreArchivo.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+  const rutaCompleta = path.join(UPLOAD_DIR, nombreSeguro);
+
+  if (!fs.existsSync(rutaCompleta)) {
+    call.emit('error', {
+      code: grpc.status.NOT_FOUND,
+      details: 'La imagen solicitada no existe en el servidor.'
+    });
+    return;
+  }
+
+  const readStream = fs.createReadStream(rutaCompleta, { highWaterMark: 1024 * 64 });
+
+  readStream.on('data', (chunk) => {
+    call.write({ chunk: chunk });
+  });
+
+  readStream.on('end', () => {
+    call.end();
+  });
+
+  readStream.on('error', (error) => {
+    console.error('Error al leer la imagen para descarga:', error);
+    call.emit('error', {
+      code: grpc.status.INTERNAL,
+      details: 'Error interno al leer el archivo físico.'
+    });
+  });
+};
+
+
 const iniciarServidorGrpc = () => {
   const server = new grpc.Server();
-  server.addService(mediaProto.MediaService.service, { SubirImagen: subirImagen });
+  
+  server.addService(mediaProto.MediaService.service, { 
+    SubirImagen: subirImagen,
+    DescargarImagen: descargarImagen 
+  });
   
   const puertoGrpc = '0.0.0.0:50051';
   server.bindAsync(puertoGrpc, grpc.ServerCredentials.createInsecure(), (error, port) => {
@@ -64,12 +117,11 @@ const iniciarServidorGrpc = () => {
       console.error('Error al iniciar gRPC:', error);
       return;
     }
-    console.log(`Metroid Wiki gRPC Media Server corriendo en el puerto ${port}`);
-    console.log(`Las imágenes se guardarán en: ${UPLOAD_DIR}`);
+    console.log(`[gRPC] Metroid Wiki Media Server corriendo en ${puertoGrpc}`);
+    console.log(`[gRPC] Almacenando multimedia en: ${UPLOAD_DIR}`);
   });
 };
 
-// Si se ejecuta directamente
 if (require.main === module) {
   iniciarServidorGrpc();
 }

@@ -17,7 +17,6 @@ public class ComentarioDTO {
         this.contenido = contenido;
     }
 
-    // Getters
     public String getId() { return id; }
     public String getArticuloId() { return articuloId; }
     public String getAutorId() { return autorId; }
@@ -27,7 +26,6 @@ public class ComentarioDTO {
     public String getFechaCreacion() { return fechaCreacion; }
     public String getFechaActualizacion() { return fechaActualizacion; }
 
-    // Setters
     public void setId(String id) { this.id = id; }
     public void setArticuloId(String articuloId) { this.articuloId = articuloId; }
     public void setAutorId(String autorId) { this.autorId = autorId; }

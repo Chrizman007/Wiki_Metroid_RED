@@ -14,7 +14,6 @@ import java.util.concurrent.ExecutionException;
 
 public class DevConsoleFrame extends JFrame {
 
-    // CONSTANTES DE CLEAN CODE
     private static final String FONT_MONOSPACED = "Monospaced";
     private static final String FONT_SEGOE = "Segoe UI";
 
@@ -26,7 +25,6 @@ public class DevConsoleFrame extends JFrame {
     private JTextArea txtJsonOutput;
     private JTextField txtEndpoint;
 
-    //HECHO TRANSIENT POR BUENAS PRÁCTICAS
     private transient String tokenJwt;
 
     public DevConsoleFrame(String token) {
@@ -34,12 +32,11 @@ public class DevConsoleFrame extends JFrame {
 
         setTitle("Terminal de Diagnóstico de Red - Protocolo gRPC/REST");
         setSize(750, 550);
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE); // 🛠️ Corregido a WindowConstants
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(fondoPrincipal);
         setLayout(new BorderLayout(15, 15));
 
-        // --- Panel Superior: Token e Input ---
         JPanel panelSuperior = new JPanel();
         panelSuperior.setLayout(new BoxLayout(panelSuperior, BoxLayout.Y_AXIS));
         panelSuperior.setBackground(fondoPrincipal);
@@ -53,20 +50,20 @@ public class DevConsoleFrame extends JFrame {
         txtToken.setEditable(false);
         txtToken.setBackground(panelSecundario);
         txtToken.setForeground(Color.GRAY);
-        txtToken.setFont(new Font(FONT_MONOSPACED, Font.PLAIN, 11)); // 🛠️ Uso de Constante
+        txtToken.setFont(new Font(FONT_MONOSPACED, Font.PLAIN, 11));
 
         JPanel panelUrl = new JPanel(new BorderLayout(10, 0));
         panelUrl.setBackground(fondoPrincipal);
         panelUrl.setBorder(new EmptyBorder(10, 0, 0, 0));
 
         JLabel lblUrlBase = new JLabel(RetrofitClient.BASE_URL);
-        lblUrlBase.setFont(new Font(FONT_MONOSPACED, Font.BOLD, 13)); // 🛠️ Uso de Constante
+        lblUrlBase.setFont(new Font(FONT_MONOSPACED, Font.BOLD, 13));
         lblUrlBase.setForeground(acentoNaranja);
 
         txtEndpoint = new JTextField("articulos");
         txtEndpoint.setBackground(panelSecundario);
         txtEndpoint.setForeground(Color.WHITE);
-        txtEndpoint.setFont(new Font(FONT_MONOSPACED, Font.PLAIN, 13)); // 🛠️ Uso de Constante
+        txtEndpoint.setFont(new Font(FONT_MONOSPACED, Font.PLAIN, 13));
 
         JButton btnEnviar = new JButton("CONSUMIR API");
         btnEnviar.setBackground(acentoNaranja);
@@ -90,7 +87,6 @@ public class DevConsoleFrame extends JFrame {
 
         add(panelSuperior, BorderLayout.NORTH);
 
-        // --- Panel Central: Output JSON Estilo Terminal ---
         txtJsonOutput = new JTextArea("// Presiona 'CONSUMIR API' para interceptar la respuesta REST de Node.js...");
         txtJsonOutput.setBackground(Color.BLACK);
         txtJsonOutput.setForeground(textoClaro);
@@ -109,7 +105,7 @@ public class DevConsoleFrame extends JFrame {
         add(panelCentro, BorderLayout.CENTER);
     }
 
-    @SuppressWarnings("squid:S2095") // 🛡️ Escudo protector: Evita advertencia de AutoCloseable para mantener compatibilidad con Java 11/17
+    @SuppressWarnings("squid:S2095")
     private void ejecutarPeticionCruda() {
         txtJsonOutput.setText("📡 Conectando con " + RetrofitClient.BASE_URL + txtEndpoint.getText() + "...\nInyectando cabecera Authorization...");
 
@@ -135,7 +131,6 @@ public class DevConsoleFrame extends JFrame {
 
                     return response.body();
                 } catch (InterruptedException ex) {
-                    //Hilos: Notificamos al sistema que la operación fue interrumpida
                     Thread.currentThread().interrupt();
                     throw new ErrorConsumoAPIException("Conexión interrumpida por el sistema", 500);
                 } catch (java.io.IOException ex) {
@@ -149,13 +144,12 @@ public class DevConsoleFrame extends JFrame {
                     String jsonPuro = get();
                     txtJsonOutput.setText(jsonPuro.replace("{", "{\n  ").replace(",", ",\n  ").replace("}", "\n}"));
                 } catch (InterruptedException ie) {
-                    //Hilos: Restauramos la interrupción aquí también
                     Thread.currentThread().interrupt();
-                    txtJsonOutput.setText("❌ OPERACIÓN CANCELADA / INTERRUMPIDA.");
+                    txtJsonOutput.setText("OPERACIÓN CANCELADA / INTERRUMPIDA.");
                 } catch (ExecutionException ee) {
                     if (ee.getCause() instanceof ErrorConsumoAPIException) {
                         ErrorConsumoAPIException exEspecifica = (ErrorConsumoAPIException) ee.getCause();
-                        txtJsonOutput.setText("❌ RUPTURA DE PROTOCOLO HTTP:\n" + exEspecifica.getMessage() + "\nCódigo HTTP recibido: " + exEspecifica.getCodigoRespuesta());
+                        txtJsonOutput.setText("RUPTURA DE PROTOCOLO HTTP:\n" + exEspecifica.getMessage() + "\nCódigo HTTP recibido: " + exEspecifica.getCodigoRespuesta());
                     } else {
                         txtJsonOutput.setText("❌ Error desconocido en la consola interna.");
                     }

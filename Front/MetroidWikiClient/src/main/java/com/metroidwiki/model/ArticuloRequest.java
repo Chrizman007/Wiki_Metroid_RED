@@ -6,9 +6,8 @@ public class ArticuloRequest {
     private String descripcion;
     private String contenido;
     private String imagen;
-    private String estado; // 🛠️ Campo de estado añadido
+    private String estado;
 
-    // 🛠️ CONSTRUCTOR 1 (5 parámetros): Usado por NuevoArticuloFrame (Creación)
     public ArticuloRequest(String titulo, String categoria, String descripcion, String contenido, String imagen) {
         this.titulo = titulo;
         this.categoria = categoria;
@@ -17,7 +16,6 @@ public class ArticuloRequest {
         this.imagen = imagen;
     }
 
-    // 🛠️ CONSTRUCTOR 2 (6 parámetros): Usado por EditarArticuloFrame (Actualización)
     public ArticuloRequest(String titulo, String categoria, String descripcion, String contenido, String imagen, String estado) {
         this.titulo = titulo;
         this.categoria = categoria;

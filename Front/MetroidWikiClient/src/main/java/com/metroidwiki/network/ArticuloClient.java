@@ -12,7 +12,7 @@ import retrofit2.http.PUT;
 import retrofit2.http.Path;
 
 public interface ArticuloClient {
-    // Apuntamos al Gateway que nos redirigirá al microservicio de Artículos
+
     @POST("articulos")
     Call<ArticuloResponse> crearArticulo(
             @Header("Authorization") String token,

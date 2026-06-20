@@ -13,7 +13,6 @@ import retrofit2.http.Path;
 import retrofit2.http.Query;
 
 public interface ComentarioClient {
-    // Obtener comentarios de un artículo
     @GET("comentarios/{articuloId}")
     Call<ComentariosListResponse> obtenerComentarios(
             @Path("articuloId") String articuloId,
@@ -21,7 +20,6 @@ public interface ComentarioClient {
             @Query("skip") int skip
     );
 
-    // Crear un nuevo comentario
     @POST("comentarios/{articuloId}")
     Call<ComentarioResponse> crearComentario(
             @Path("articuloId") String articuloId,
@@ -29,7 +27,6 @@ public interface ComentarioClient {
             @Body ComentarioRequest request
     );
 
-    // Eliminar un comentario (Moderación)
     @DELETE("comentarios/{id}")
     Call<Void> eliminarComentario(
             @Path("id") String idComentario,

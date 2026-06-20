@@ -7,7 +7,7 @@ public class ComentariosListResponse {
     private List<ComentarioDTO> comentarios;
 
     public ComentariosListResponse() {
-        // Constructor vacío requerido obligatoriamente para la deserialización JSON de Retrofit
+
     }
 
     public int getTotal() { return total; }

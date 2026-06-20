@@ -12,7 +12,6 @@ public class ArticuloDTO {
     private String fechaCreacion;
     private String autor;
 
-    // Constructor vacío necesario para que Retrofit pueda instanciar la clase
     public ArticuloDTO() {}
 
     public ArticuloDTO(String titulo, String categoria, String descripcion, String contenido, String estado, String autor) {

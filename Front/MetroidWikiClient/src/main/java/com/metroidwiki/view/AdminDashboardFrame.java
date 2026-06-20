@@ -49,7 +49,6 @@ public class AdminDashboardFrame extends JFrame {
     private final Color textoClaro = new Color(230, 230, 230);
     private final Color textoGris = new Color(150, 150, 150);
 
-    // USO DE TRANSIENT PARA VARIABLES NO SERIALIZABLES (Adiós S1948)
     private transient String tokenUsuarioActual;
     private transient String nombreUsuarioActual;
     private transient List<ArticuloDTO> listaArticulosCache = new ArrayList<>();
@@ -70,7 +69,7 @@ public class AdminDashboardFrame extends JFrame {
 
         setTitle("Federación Galáctica - Terminal de Administración");
         setSize(1000, 700);
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE); // 🛠️ Corregido a WindowConstants (S3252)
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
         getContentPane().setBackground(fondoPrincipal);
         setLayout(new BorderLayout(15, 15));
@@ -355,7 +354,7 @@ public class AdminDashboardFrame extends JFrame {
                     JOptionPane.showMessageDialog(AdminDashboardFrame.this, "Fallo de red: " + t.getMessage(), TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                 }
             });
-        } catch (RuntimeException ex) { // 🛠️ Excepción específica
+        } catch (RuntimeException ex) {
             logger.log(Level.SEVERE, "Excepción interna ejecutando archivado REST", ex);
             JOptionPane.showMessageDialog(this, "Error interno al archivar.", TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
         }
@@ -463,8 +462,8 @@ public class AdminDashboardFrame extends JFrame {
 
     class BotonIconoRenderer extends DefaultTableCellRenderer {
         private String tipo;
-        private transient Icon iconoEditar;    // 🛠️ Protegidos con transient
-        private transient Icon iconoArchivar;  // 🛠️ Protegidos con transient
+        private transient Icon iconoEditar;
+        private transient Icon iconoArchivar;
 
         public BotonIconoRenderer(String tipo) {
             this.tipo = tipo;

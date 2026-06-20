@@ -8,8 +8,6 @@ const express = require('express');
 const cors = require('cors');
 const mongoose = require('mongoose');
 const jwt = require('jsonwebtoken');
-
-// LIBRERÍAS DE gRPC Y RUTAS
 const path = require('path');
 const fs = require('fs');
 const grpc = require('@grpc/grpc-js');
@@ -50,7 +48,6 @@ async function handleArticleView(req, articleId) {
   const userKey = deriveUserKey(req);
   const now = Date.now();
 
-  // Si el artículo no está en la memoria caché de vistas, lo agregamos
   if (!viewCooldownStore.has(articleId)) {
     viewCooldownStore.set(articleId, new Map());
   }
@@ -58,7 +55,6 @@ async function handleArticleView(req, articleId) {
   const userMap = viewCooldownStore.get(articleId);
   const lastViewTime = userMap.get(userKey) || 0;
 
-  // Si ya pasaron los 30 segundos de seguridad (Cooldown)
   if (now - lastViewTime > VIEW_COOLDOWN_MS) {
     userMap.set(userKey, now); 
     
@@ -66,11 +62,9 @@ async function handleArticleView(req, articleId) {
     return true; 
   }
   
-  // Si no pasaron 30 segundos, ignoramos la vista para evitar spam
   return false; 
 }
 
-// Este es el basurero automático que limpia la RAM de Node.js cada hora
 setInterval(() => {
   const now = Date.now();
   const maxAge = 60 * 60 * 1000; 
@@ -276,7 +270,6 @@ const ArticuloRepository = {
     }
   },
 
-  // 🛠️ NUEVO: Método para actualizar en la base de datos
   actualizar: async (id, datosActualizados) => {
     try {
       return await Articulo.findByIdAndUpdate(id, datosActualizados, { new: true, runValidators: true });
@@ -478,7 +471,6 @@ router.post('/', verificarPermisos(['administrador']), async (req, res) => {
   }
 });
 
-// 🛠️ NUEVO: RUTA PARA ACTUALIZAR (PUT)
 /**
  * @swagger
  * /articulos/{id}:

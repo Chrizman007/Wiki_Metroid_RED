@@ -1,7 +1,7 @@
 package com.metroidwiki.model;
 
 public class RegistroRequest {
-    private String nombre; // Campo obligatorio añadido
+    private String nombre;
     private String correo;
     private String password;
 

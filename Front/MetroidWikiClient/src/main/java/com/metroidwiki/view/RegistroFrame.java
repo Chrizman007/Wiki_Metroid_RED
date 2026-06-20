@@ -20,10 +20,8 @@ public class RegistroFrame extends JFrame {
 
     private static final Logger logger = Logger.getLogger(RegistroFrame.class.getName());
 
-    // 🛠️ Constante extraída para Clean Code
     private static final String FONT_SEGOE = "Segoe UI";
 
-    // NUEVO: Campo para el nombre
     private JTextField txtNombre;
     private JTextField txtCorreo;
     private JPasswordField txtPassword;
@@ -73,7 +71,6 @@ public class RegistroFrame extends JFrame {
         Font fuenteLabel = new Font(FONT_SEGOE, Font.BOLD, 14);
         Font fuenteInput = new Font(FONT_SEGOE, Font.PLAIN, 16);
 
-        // --- NUEVO: NOMBRE ---
         JLabel lblNombre = new JLabel("Nombre de Cazador:", SwingConstants.CENTER);
         lblNombre.setForeground(textoClaro);
         lblNombre.setFont(fuenteLabel);
@@ -83,7 +80,6 @@ public class RegistroFrame extends JFrame {
         txtNombre.setHorizontalAlignment(SwingConstants.CENTER);
         txtNombre.setPreferredSize(new Dimension(200, 35));
 
-        // --- CORREO ---
         JLabel lblCorreo = new JLabel("Correo Electrónico:", SwingConstants.CENTER);
         lblCorreo.setForeground(textoClaro);
         lblCorreo.setFont(fuenteLabel);
@@ -93,7 +89,6 @@ public class RegistroFrame extends JFrame {
         txtCorreo.setHorizontalAlignment(SwingConstants.CENTER);
         txtCorreo.setPreferredSize(new Dimension(200, 35));
 
-        // --- CONTRASEÑA ---
         JLabel lblPassword = new JLabel("Contraseña:", SwingConstants.CENTER);
         lblPassword.setForeground(textoClaro);
         lblPassword.setFont(fuenteLabel);
@@ -103,7 +98,6 @@ public class RegistroFrame extends JFrame {
         txtPassword.setHorizontalAlignment(SwingConstants.CENTER);
         txtPassword.setPreferredSize(new Dimension(200, 35));
 
-        // --- CONFIRMAR CONTRASEÑA ---
         JLabel lblConfirmar = new JLabel("Confirmar Contraseña:", SwingConstants.CENTER);
         lblConfirmar.setForeground(textoClaro);
         lblConfirmar.setFont(fuenteLabel);
@@ -113,7 +107,6 @@ public class RegistroFrame extends JFrame {
         txtConfirmarPassword.setHorizontalAlignment(SwingConstants.CENTER);
         txtConfirmarPassword.setPreferredSize(new Dimension(200, 35));
 
-        // Acomodamos en la cuadrícula
         gbc.gridy = 0; panelCampos.add(lblNombre, gbc);
         gbc.gridy = 1; panelCampos.add(txtNombre, gbc);
         gbc.gridy = 2; panelCampos.add(lblCorreo, gbc);

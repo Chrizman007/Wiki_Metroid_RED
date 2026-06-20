@@ -6,13 +6,14 @@ import com.metroidwiki.model.ComentarioRequest;
 import com.metroidwiki.model.ComentariosListResponse;
 import com.metroidwiki.network.ComentarioClient;
 import com.metroidwiki.network.RetrofitClient;
+import com.metroidwiki.network.GrpcMediaClient;
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.net.URL;
+import java.io.File;
 import java.util.Base64;
 import javax.imageio.ImageIO;
 import java.util.List;
@@ -25,13 +26,11 @@ public class DetalleArticuloFrame extends JFrame {
 
     private static final Logger logger = Logger.getLogger(DetalleArticuloFrame.class.getName());
 
-    // 🛠️ CONSTANTES DE CLEAN CODE
     private static final String FONT_SEGOE = "Segoe UI";
     private static final String TITULO_ERROR = "Error";
     private static final String PREFIJO_BEARER = "Bearer ";
     private static final String TXT_PLACEHOLDER_COMENTARIO = "Escribe una transmisión pública...";
 
-    // Paleta de colores
     private final Color fondoPrincipal = new Color(25, 25, 28);
     private final Color panelSecundario = new Color(35, 35, 40);
     private final Color fondoFicha = new Color(18, 18, 20);
@@ -40,7 +39,6 @@ public class DetalleArticuloFrame extends JFrame {
     private final Color textoClaro = new Color(230, 230, 230);
     private final Color textoGris = new Color(150, 150, 150);
 
-    //VARIABLES TRANSIENT PARA OBJETOS NO SERIALIZABLES
     private transient ArticuloDTO articulo;
     private transient String tokenUsuario;
     private transient String nombreUsuario;
@@ -57,7 +55,7 @@ public class DetalleArticuloFrame extends JFrame {
 
         setTitle("Federación Galáctica - " + articulo.getTitulo());
         setSize(850, 750);
-        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE); // 🛠️ Corregido WindowConstants
+        setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
         setLocationRelativeTo(null);
 
         JPanel panelContenedorAbsoluto = new JPanel(new BorderLayout());
@@ -95,8 +93,8 @@ public class DetalleArticuloFrame extends JFrame {
         try {
             String rutaLimpia = ruta.startsWith("/") ? ruta.substring(1) : ruta;
             return new FlatSVGIcon(rutaLimpia, width, height);
-        } catch (RuntimeException e) { // 🛠️ Excepción específica y logger
-            logger.log(Level.SEVERE, "❌ Error cargando SVG " + ruta, e);
+        } catch (RuntimeException e) {
+            logger.log(Level.SEVERE, "Error cargando SVG " + ruta, e);
             return null;
         }
     }
@@ -368,7 +366,7 @@ public class DetalleArticuloFrame extends JFrame {
                 try {
                     List<ComentarioDTO> comentarios = get();
                     mostrarComentarios(comentarios);
-                } catch (InterruptedException ie) { // 🛠️ Corregido: Manejo de Hilos
+                } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     logger.log(Level.SEVERE, "Hilo de carga de comentarios interrumpido", ie);
                 } catch (ExecutionException ee) {
@@ -518,7 +516,7 @@ public class DetalleArticuloFrame extends JFrame {
                 Response<com.metroidwiki.model.ComentarioResponse> response = call.execute();
 
                 if (!response.isSuccessful()) {
-                    throw new RuntimeException("Error al crear comentario: " + response.code()); // 🛠️ RuntimeException en lugar de genérica
+                    throw new RuntimeException("Error al crear comentario: " + response.code());
                 }
 
                 return null;
@@ -537,7 +535,7 @@ public class DetalleArticuloFrame extends JFrame {
                     txtComentario.setText(TXT_PLACEHOLDER_COMENTARIO);
                     txtComentario.setForeground(textoGris);
                     cargarComentarios();
-                } catch (InterruptedException ie) { // 🛠️ Hilos y ejecución controlada
+                } catch (InterruptedException ie) {
                     Thread.currentThread().interrupt();
                     JOptionPane.showMessageDialog(DetalleArticuloFrame.this, "Operación interrumpida.", TITULO_ERROR, JOptionPane.ERROR_MESSAGE);
                 } catch (ExecutionException ee) {
@@ -594,49 +592,33 @@ public class DetalleArticuloFrame extends JFrame {
             return;
         }
 
-        String nombreCodificado = nombreImagen.replace(" ", "%20");
-        String urlCompleta;
-        if (nombreImagen.startsWith("http://") || nombreImagen.startsWith("https://")) {
-            urlCompleta = nombreCodificado;
-        } else {
-            urlCompleta = RetrofitClient.BASE_URL + "articulos/public/imagenes/" + nombreCodificado;
-        }
+        String tempDir = System.getProperty("java.io.tmpdir") + File.separator + "metroidwiki_cache";
 
-        SwingWorker<ImageIcon, Void> worker = new SwingWorker<>() {
-            @Override
-            protected ImageIcon doInBackground() throws Exception {
-                URL url = new URL(urlCompleta);
-                Image img = ImageIO.read(url);
-                if (img != null) {
-                    Image scaledImg = img.getScaledInstance(220, 140, Image.SCALE_SMOOTH);
-                    return new ImageIcon(scaledImg);
-                }
-                return null;
-            }
+        GrpcMediaClient grpcClient = new GrpcMediaClient();
 
+        grpcClient.descargarImagenArticulo(nombreImagen, tempDir, new GrpcMediaClient.DownloadListener() {
             @Override
-            protected void done() {
+            public void onSuccess(File archivoDescargado) {
                 try {
-                    ImageIcon icono = get();
-                    if (icono != null) {
+                    Image img = ImageIO.read(archivoDescargado);
+                    if (img != null) {
+                        Image scaledImg = img.getScaledInstance(220, 140, Image.SCALE_SMOOTH);
                         lblIcono.setText("");
-                        lblIcono.setIcon(icono);
+                        lblIcono.setIcon(new ImageIcon(scaledImg));
                     } else {
-                        lblIcono.setText("IMAGEN NO ENCONTRADA");
+                        lblIcono.setText("IMAGEN CORRUPTA");
                     }
-                } catch (InterruptedException ie) {
-                    Thread.currentThread().interrupt();
-                    lblIcono.setText("ERROR DE TRANSMISIÓN");
-                    logger.log(Level.SEVERE, "Hilo de imagen interrumpido", ie);
-                } catch (ExecutionException ee) {
-                    lblIcono.setText("ERROR DE TRANSMISIÓN");
-                    logger.log(Level.SEVERE, "Error ejecutando la descarga de imagen", ee);
-                } catch (RuntimeException re) {
-                    lblIcono.setText("ERROR DE TRANSMISIÓN");
-                    logger.log(Level.SEVERE, "Fallo interno en el renderizado", re);
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, "Error al leer imagen temporal", e);
+                    lblIcono.setText("ERROR DE LECTURA");
                 }
             }
-        };
-        worker.execute();
+
+            @Override
+            public void onError(Throwable t) {
+                lblIcono.setText("ERROR gRPC");
+                logger.log(Level.WARNING, "El servidor gRPC no pudo enviar la imagen: " + nombreImagen);
+            }
+        });
     }
 }

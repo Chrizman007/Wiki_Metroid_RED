@@ -11,9 +11,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const config = {
-  // Prioriza el puerto 3002 configurado en tu .env
   port: process.env.PORT || process.env.PORT_AUTH || 3002, 
-  // Lee la URL de la nube de MongoDB Atlas de tu .env
   mongoUri: process.env.MONGO_URI,
   jwtSecret: process.env.JWT_SECRET
 };
@@ -54,7 +52,6 @@ const usuarioSchema = new mongoose.Schema({
   fechaRegistro: { type: Date, default: Date.now }
 });
 
-// Middleware ("Hook"): Antes de guardar en la BD, encriptamos la contraseña
 usuarioSchema.pre('save', async function() {
   if (!this.isModified('password')) return;
   
@@ -93,7 +90,6 @@ class FaltanDatosAuthException extends MetroidAuthException {
   }
 }
 
-// DTO: ¡NUNCA enviamos el password de vuelta al cliente!
 class UsuarioDTO {
   constructor(modeloMongoose) {
     this.id = modeloMongoose._id;
@@ -236,7 +232,6 @@ router.post('/login', async (req, res) => {
   try {
     const authData = await AuthLogicService.iniciarSesion(req.body.correo, req.body.password);
     
-    // Enviamos el token estrictamente en el header de Authorization (Bearer Token)
     res.setHeader(
       'Authorization',
       `Bearer ${authData.token}`
