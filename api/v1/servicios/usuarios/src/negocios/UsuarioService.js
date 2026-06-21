@@ -1,7 +1,3 @@
-/**
- * Metroid Wiki - UsuarioService (Servicio de Autenticación)
- * API del Microservicio de Usuarios y Seguridad conectado a MongoDB Atlas
- */
 require('dotenv').config();
 
 const express = require('express');
@@ -18,9 +14,8 @@ const config = {
 
 const router = express.Router();
 
-// ==========================================
-// CONFIGURACIÓN DE SWAGGER
-// ==========================================
+
+
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 
@@ -40,9 +35,8 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// ==========================================
-// 1. MODELO DE DATOS (Mongoose)
-// ==========================================
+
+
 const usuarioSchema = new mongoose.Schema({
   nombre: { type: String, required: true },
   correo: { type: String, required: true, unique: true },
@@ -60,9 +54,8 @@ usuarioSchema.pre('save', async function() {
 
 const Usuario = mongoose.model('Usuario', usuarioSchema);
 
-// ==========================================
-// 2. EXCEPCIONES ESPECÍFICAS Y DTOs
-// ==========================================
+
+
 class MetroidAuthException extends Error {
   constructor(mensaje, statusCode) {
     super(mensaje);
@@ -98,9 +91,8 @@ class UsuarioDTO {
   }
 }
 
-// ==========================================
-// 3. CAPA DE NEGOCIO (Servicio)
-// ==========================================
+
+
 const AuthLogicService = {
   registrarUsuario: async (datos) => {
     if (!datos.nombre || !datos.correo || !datos.password) {
@@ -151,9 +143,8 @@ const AuthLogicService = {
   }
 };
 
-// ==========================================
-// 4. CAPA DE PRESENTACION (Controladores HTTP)
-// ==========================================
+
+
 function manejarExcepcionAuthHTTP(error, res) {
   if (error instanceof MetroidAuthException) {
     return res.status(error.statusCode).json({
@@ -267,9 +258,8 @@ router.post('/login', async (req, res) => {
   }
 });
 
-// ==========================================
-// 5. INICIO DEL SERVIDOR
-// ==========================================
+
+
 async function startAuthServer() {
   try {
     mongoose.connection.on('error', (err) => {
