@@ -14,20 +14,36 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 const mediaProto = grpc.loadPackageDefinition(packageDefinition).media;
 const UPLOAD_DIR = path.join(__dirname, '..', 'public', 'imagenes');
 
-if (!fs.existsSync(UPLOAD_DIR)) {
+try {
+  if (!fs.existsSync(UPLOAD_DIR)) {
     fs.mkdirSync(UPLOAD_DIR, { recursive: true });
+  }
+} catch (dirError) {
+  console.error('🚨 [CRÍTICO] No se pudo crear el directorio de almacenamiento:', dirError.message);
 }
 
 const subirImagen = (call, callback) => {
   let nombreArchivo = '';
   let fileBuffer = [];
 
+  call.on('error', (streamError) => {
+    console.error('❌ Error en el stream de subida gRPC:', streamError.message);
+  });
+
   call.on('data', (request) => {
-    if (request.nombreArchivo && !nombreArchivo) {
-      nombreArchivo = request.nombreArchivo;
-    }
-    if (request.chunk) {
-      fileBuffer.push(request.chunk);
+    try {
+      if (request.nombreArchivo && !nombreArchivo) {
+        nombreArchivo = request.nombreArchivo;
+      }
+      if (request.chunk) {
+        fileBuffer.push(request.chunk);
+      }
+    } catch (dataError) {
+      console.error('❌ Error procesando fragmento de datos:', dataError.message);
+      return callback({
+        code: grpc.status.INTERNAL,
+        details: 'Error interno al procesar los fragmentos de la imagen.'
+      });
     }
   });
 
@@ -52,6 +68,7 @@ const subirImagen = (call, callback) => {
         });
       }
 
+      console.log(`[gRPC] Archivo multimedia guardado con éxito: ${nombreSeguro}`);
       callback(null, {
         exito: true,
         mensaje: 'Imagen subida correctamente a AWS',
@@ -86,6 +103,11 @@ const descargarImagen = (call) => {
   const readStream = fs.createReadStream(rutaCompleta, { highWaterMark: 1024 * 64 });
 
   readStream.on('data', (chunk) => {
+    if (call.cancelled) {
+      console.warn(`⚠️ Descarga abortada por el cliente para el archivo: ${nombreSeguro}`);
+      readStream.destroy();
+      return;
+    }
     call.write({ chunk: chunk });
   });
 
@@ -121,6 +143,15 @@ const iniciarServidorGrpc = () => {
     console.log(`[gRPC] Almacenando multimedia en: ${UPLOAD_DIR}`);
   });
 };
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 [gRPC Crítico] Rechazo asíncrono no manejado:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('🚨 [gRPC Crítico] Excepción síncrona no capturada:', error.message);
+  console.error(error.stack);
+});
 
 if (require.main === module) {
   iniciarServidorGrpc();
