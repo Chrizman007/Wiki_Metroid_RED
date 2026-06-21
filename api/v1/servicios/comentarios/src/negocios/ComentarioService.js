@@ -12,9 +12,8 @@ const config = {
   mongoUri: process.env.MONGO_URI
 };
 
-// =========================
-// MONGOOSE SCHEMAS
-// =========================
+
+
 const commentCounterSchema = new mongoose.Schema({
   articleId: { type: mongoose.Schema.Types.ObjectId, required: true, unique: true },
   seq: { type: Number, default: 0 }
@@ -33,9 +32,8 @@ const comentarioSchema = new mongoose.Schema({
 const CommentCounter = mongoose.model('CommentCounter', commentCounterSchema);
 const Comentario = mongoose.model('Comentario', comentarioSchema);
 
-// =========================
-// EXCEPTIONS / DTO
-// =========================
+
+
 class ComentarioException extends Error {
   constructor(message, status) {
     super(message);
@@ -55,7 +53,7 @@ class BadRequestException extends ComentarioException {
 class ComentarioDTO {
   constructor(model) {
     this.id = model._id;
-    this.articuloId = model.articuloId || model.articuloId;
+    this.articuloId = model.articuloId;
     this.autorId = model.autorId;
     this.autorNombre = model.autorNombre;
     this.contenido = model.contenido;
@@ -65,9 +63,8 @@ class ComentarioDTO {
   }
 }
 
-// =========================
-// JWT MIDDLEWARE
-// =========================
+
+
 const verificarPermisos = (rolesPermitidos) => {
   return (req, res, next) => {
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];
@@ -115,9 +112,8 @@ const verificarPermisos = (rolesPermitidos) => {
   };
 };
 
-// =========================
-// REPOSITORY - concurrency-safe creation
-// =========================
+
+
 const ComentarioRepository = {
   listarPorArticulo: async (articuloId, limit = 100, skip = 0) => {
     try {
@@ -162,9 +158,8 @@ const ComentarioRepository = {
   }
 };
 
-// =========================
-// BUSINESS LOGIC
-// =========================
+
+
 const ComentarioService = {
   listarComentarios: async (articuloId, limit, skip) => {
     if (!mongoose.Types.ObjectId.isValid(articuloId)) throw new BadRequestException('ID de articulo inválido');
@@ -192,9 +187,8 @@ const ComentarioService = {
   }
 };
 
-// =========================
-// CONTROLLERS / ROUTES
-// =========================
+
+
 function manejarError(res, err) {
   if (err instanceof ComentarioException) {
     return res.status(err.statusCode || 500).json({ error: err.name, message: err.message });
@@ -257,9 +251,8 @@ router.delete('/:id', verificarPermisos(['administrador']), async (req, res) => 
   }
 });
 
-// =========================
-// Server start/export
-// =========================
+
+
 module.exports = { router, config };
 
 async function startServer() {
