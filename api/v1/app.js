@@ -1,8 +1,3 @@
-/**
- * Metroid Wiki - API Gateway
- * API Gateway centralizado para la Metroid Wiki
- * Solo enruta solicitudes HTTP a los servicios (SOA)
- */
 require('dotenv').config();
 
 const express = require('express');
@@ -23,15 +18,33 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ==========================================
-// PROXYS DE SERVICIOS (SOA)
-// ==========================================
+const handleProxyError = (serviceName) => {
+  return (err, req, res) => {
+    console.error(`🚨 [Gateway] Error de comunicación con el servicio [${serviceName}]:`, err.message);
+    
+    if (res.headersSent) return;
+
+    if (err.code === 'ECONNREFUSED') {
+      return res.status(503).json({
+        error: 'ServiceUnavailable',
+        message: `El microservicio de [${serviceName}] no se encuentra disponible temporalmente.`
+      });
+    }
+    
+    return res.status(504).json({
+      error: 'GatewayTimeout',
+      message: `El servicio de [${serviceName}] tardó demasiado tiempo en responder.`
+    });
+  };
+};
+
+
 
 app.use('/articulos', createProxyMiddleware({
   target: config.services.articulos || 'http://localhost:3001',
   changeOrigin: true,
   onProxyReq: (proxyReq, req, res) => {
-    if (req.body) {
+    if (req.body && Object.keys(req.body).length > 0) {
       const bodyData = JSON.stringify(req.body);
       proxyReq.setHeader('Content-Type', 'application/json');
       proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
@@ -44,7 +57,7 @@ app.use('/auth', createProxyMiddleware({
   target: (config.services && config.services.auth) ? config.services.auth : 'http://localhost:3002',
   changeOrigin: true,
   onProxyReq: (proxyReq, req, res) => {
-    if (req.body) {
+    if (req.body && Object.keys(req.body).length > 0) {
       const bodyData = JSON.stringify(req.body);
       proxyReq.setHeader('Content-Type', 'application/json');
       proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
@@ -57,7 +70,7 @@ app.use('/comentarios', createProxyMiddleware({
   target: config.services.comentarios || 'http://localhost:3004',
   changeOrigin: true,
   onProxyReq: (proxyReq, req, res) => {
-    if (req.body) {
+    if (req.body && Object.keys(req.body).length > 0) {
       const bodyData = JSON.stringify(req.body);
       proxyReq.setHeader('Content-Type', 'application/json');
       proxyReq.setHeader('Content-Length', Buffer.byteLength(bodyData));
@@ -66,9 +79,25 @@ app.use('/comentarios', createProxyMiddleware({
   }
 }));
 
-// ==========================================
-// INICIO DEL GATEWAY
-// ==========================================
+
+
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'RouteNotFound',
+    message: 'La ruta solicitada no existe en el API Gateway de Metroid Wiki.'
+  });
+});
+
+app.use((err, req, res, next) => {
+  console.error('🚨 [Gateway] Error interno de Express:', err);
+  res.status(500).json({
+    error: 'InternalGatewayError',
+    message: 'Ocurrió un error inesperado en la gestión de pasarela de la aplicación.'
+  });
+});
+
+
+
 function startServer() {
   const port = config.port || 3000;
   
@@ -80,6 +109,15 @@ function startServer() {
     console.log(`Proxying /comentarios -> ${config.services.comentarios || 'http://localhost:3004'}`);
   });
 }
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 [Gateway Crítico] Rechazo asíncrono no manejado:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('🚨 [Gateway Crítico] Excepción síncrona no capturada:', error.message);
+  console.error(error.stack);
+});
 
 module.exports = { app, config };
 
