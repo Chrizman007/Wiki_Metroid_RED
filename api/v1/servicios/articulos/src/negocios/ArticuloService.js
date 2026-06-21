@@ -1,7 +1,3 @@
-/**
- * Metroid Wiki - ArticuloService (Capa de Artículos Conectada a la Nube)
- * API del Microservicio de Artículos con validación JWT, MongoDB Atlas y gRPC
- */
 require('dotenv').config();
 
 const express = require('express');
@@ -20,9 +16,8 @@ const config = {
 
 const router = express.Router();
 
-// ==========================================
-// VIEWS COOLDOWN (Per-article per-user)
-// ==========================================
+
+
 const VIEW_COOLDOWN_MS = 30 * 1000;
 const viewCooldownStore = new Map();
 
@@ -76,9 +71,8 @@ setInterval(() => {
   }
 }, 60 * 1000);
 
-// ==========================================
-// CONFIGURACIÓN DE gRPC
-// ==========================================
+
+
 const PROTO_PATH = path.join(__dirname, '../../proto/media.proto');
 
 const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
@@ -91,9 +85,8 @@ const packageDefinition = protoLoader.loadSync(PROTO_PATH, {
 
 const mediaProto = grpc.loadPackageDefinition(packageDefinition).media;
 
-// ==========================================
-// MIDDLEWARE DE SEGURIDAD
-// ==========================================
+
+
 const verificarPermisos = (rolesPermitidos) => {
   return (req, res, next) => {
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];
@@ -123,14 +116,30 @@ const verificarPermisos = (rolesPermitidos) => {
       
       next();
     } catch (error) {
-      return res.status(401).json({ message: "Token inválido o expirado.", detalle: error.message });
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          error: 'TokenExpired',
+          message: 'La sesión ha expirado.'
+        });
+      }
+
+      if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({
+          error: 'InvalidToken',
+          message: 'El token es inválido.'
+        });
+      }
+
+      return res.status(500).json({
+        error: 'AuthError',
+        message: 'Error al validar el token.'
+      });
     }
   };
 };
 
-// ==========================================
-// CONFIGURACION DE SWAGGER
-// ==========================================
+
+
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsDoc = require('swagger-jsdoc');
 
@@ -159,9 +168,8 @@ const swaggerOptions = {
 const swaggerDocs = swaggerJsDoc(swaggerOptions);
 router.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerDocs));
 
-// ==========================================
-// 1. CONFIGURACION DE BASE DE DATOS (Mongoose + UML)
-// ==========================================
+
+
 const articleSchema = new mongoose.Schema({
   titulo: { type: String, required: true, unique: true, trim: true },
   descripcion: { type: String, required: true, trim: true },
@@ -186,9 +194,8 @@ const articleSchema = new mongoose.Schema({
 
 const Articulo = mongoose.model('Articulo', articleSchema);
 
-// ==========================================
-// 2. EXCEPCIONES ESPECIFICAS Y DTOs
-// ==========================================
+
+
 class MetroidException extends Error {
   constructor(mensaje, statusCode) {
     super(mensaje);
@@ -199,7 +206,7 @@ class MetroidException extends Error {
 
 class DocumentoNoEncontradoException extends MetroidException {
   constructor(id) {
-    super(`No se encontro ningun articulo con el ID: ${id}`, 404);
+    super(`No se encontró ningún artículo con el ID: ${id}`, 404);
   }
 }
 
@@ -215,9 +222,27 @@ class CamposRequeridosFaltantesException extends MetroidException {
   }
 }
 
+class CategoriaInvalidaException extends MetroidException {
+  constructor(categoria) {
+    super(`La categoría '${categoria}' no es válida.`, 400);
+  }
+}
+
+class EstadoInvalidoException extends MetroidException {
+  constructor(estado) {
+    super(`El estado '${estado}' no es válido.`, 400);
+  }
+}
+
+class RecursoDuplicadoException extends MetroidException {
+  constructor(mensaje) {
+    super(mensaje, 409);
+  }
+}
+
 class ErrorBaseDeDatosException extends MetroidException {
   constructor(detalle) {
-    super(`Error en la operacion de base de datos: ${detalle}`, 500);
+    super(`Error en la operación de base de datos: ${detalle}`, 500);
   }
 }
 
@@ -238,15 +263,14 @@ class ArticuloDTO {
   }
 }
 
-// ==========================================
-// 3. CAPA DE DATOS (Repositorio)
-// ==========================================
+
+
 const ArticuloRepository = {
   obtenerTodos: async () => {
     try {
       return await Articulo.find();
     } catch (error) {
-      throw new ErrorBaseDeDatosException(error.message);
+      throw new ErrorBaseDeDatosException("No se pudieron obtener los artículos.");
     }
   },
 
@@ -254,7 +278,7 @@ const ArticuloRepository = {
     try {
       return await Articulo.findById(id);
     } catch (error) {
-      throw new ErrorBaseDeDatosException(error.message);
+      throw new ErrorBaseDeDatosException("No se pudo recuperar el artículo solicitado.");
     }
   },
 
@@ -264,9 +288,9 @@ const ArticuloRepository = {
       return await nuevoArticulo.save();
     } catch (error) {
       if (error.code === 11000) {
-          throw new ErrorBaseDeDatosException("Ya existe un artículo con ese título.");
+          throw new RecursoDuplicadoException("Ya existe un artículo con ese título.");
       }
-      throw new ErrorBaseDeDatosException(error.message);
+      throw new ErrorBaseDeDatosException("No se pudo guardar el artículo.");
     }
   },
 
@@ -275,9 +299,9 @@ const ArticuloRepository = {
       return await Articulo.findByIdAndUpdate(id, datosActualizados, { new: true, runValidators: true });
     } catch (error) {
       if (error.code === 11000) {
-          throw new ErrorBaseDeDatosException("Ya existe un artículo con ese título.");
+          throw new RecursoDuplicadoException("Ya existe un artículo con ese título.");
       }
-      throw new ErrorBaseDeDatosException(error.message);
+      throw new ErrorBaseDeDatosException("No se pudo actualizar el artículo.");
     }
   }
 };
@@ -286,13 +310,12 @@ ArticuloRepository.incrementarVistas = async (id) => {
   try {
     return await Articulo.findByIdAndUpdate(id, { $inc: { vistas: 1 } }, { new: true });
   } catch (error) {
-    throw new ErrorBaseDeDatosException(error.message);
+    throw new ErrorBaseDeDatosException("No se pudieron actualizar las vistas en el artículo solicitado.");
   }
 };
 
-// ==========================================
-// 4. CAPA DE NEGOCIO (Servicio)
-// ==========================================
+
+
 const ArticuloLogicService = {
   obtenerArticulos: async () => {
     const articulos = await ArticuloRepository.obtenerTodos();
@@ -321,6 +344,18 @@ const ArticuloLogicService = {
     if (datos.categoria) {
       datos.categoria = datos.categoria.charAt(0).toUpperCase() + datos.categoria.slice(1).toLowerCase();
     }
+
+    const categoriasValidas = [
+      'Lore',
+      'Items',
+      'Enemigos',
+      'Ubicaciones',
+      'Personajes'
+    ];
+
+    if (!categoriasValidas.includes(datos.categoria)) {
+      throw new CategoriaInvalidaException(datos.categoria);
+    }
     
     const articuloGuardado = await ArticuloRepository.crear(datos);
     return new ArticuloDTO(articuloGuardado);
@@ -340,14 +375,27 @@ const ArticuloLogicService = {
       datos.categoria = datos.categoria.charAt(0).toUpperCase() + datos.categoria.slice(1).toLowerCase();
     }
 
+    const estadosValidos = [
+      'EnBorrador',
+      'EnRevision',
+      'Publicado',
+      'Archivado'
+    ];
+
+    if (
+      datos.estado &&
+      !estadosValidos.includes(datos.estado)
+    ) {
+      throw new EstadoInvalidoException(datos.estado);
+    }
+
     const articuloActualizado = await ArticuloRepository.actualizar(id, datos);
     return new ArticuloDTO(articuloActualizado);
   }
 };
 
-// ==========================================
-// 5. CAPA DE PRESENTACION (Controladores HTTP)
-// ==========================================
+
+
 function manejarExcepcionHTTP(error, res) {
   if (error instanceof MetroidException) {
     console.error(`🚨 ERROR RECHAZADO POR MONGO: ${error.message}`); 
@@ -524,9 +572,7 @@ router.put('/:id', verificarPermisos(['administrador']), async (req, res) => {
 });
 
 
-// ==========================================
-// 6. SERVICIOS gRPC (Streaming y Carga)
-// ==========================================
+
 const subirImagenHandler = (call, callback) => {
   let archivoNombre = '';
   let articuloId = '';
@@ -590,21 +636,44 @@ const descargarImagenHandler = (call) => {
   }
 
   const readStream = fs.createReadStream(rutaCompleta, { highWaterMark: 1024 * 64 });
-  readStream.on('data', (chunk) => call.write({ chunk }));
+
+  readStream.on('data', (chunk) =>
+    {
+    if (call.cancelled) {
+      readStream.destroy();
+      return;
+    }
+    call.write({ chunk });
+  });
+
   readStream.on('end', () => call.end());
+
   readStream.on('error', (error) => {
     call.emit('error', { code: grpc.status.INTERNAL, details: 'Error de lectura' });
   });
 };
 
-// ==========================================
-// 7. INICIO DE TODOS LOS SERVIDORES
-// ==========================================
+
+
 module.exports = { router, config };
 
 async function startServer() {
   try {
-    await mongoose.connect(config.mongoUri);
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ [MongoDB Atlas] Error crítico de conexión en la nube:', err.message);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.warn('⚠️ [MongoDB Atlas] Se perdió la conexión con el clúster. Reintentando...');
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      console.log('✨ [MongoDB Atlas] Conexión reestablecida con éxito.');
+    });
+
+    await mongoose.connect(config.mongoUri, {
+      serverSelectionTimeoutMS: 5000
+    });
     console.log('¡Conectado exitosamente a MongoDB Atlas (Artículos)!');
     
     const app = express();
@@ -618,6 +687,15 @@ async function startServer() {
     app.use('/articulos/public/imagenes', express.static(directorioImagenes));
 
     app.use('/articulos', router);
+
+    app.use((err, req, res, next) => {
+      console.error(err);
+
+      res.status(err.statusCode || 500).json({
+        error: err.name || 'InternalServerError',
+        message: err.message || 'Error interno'
+      });
+    });
     
     app.listen(config.port, () => {
       console.log(`🌐 Metroid Wiki Article Service (REST) running on port ${config.port}`);
@@ -643,6 +721,15 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 [CRÍTICO] Rechazo no manejado en una Promesa:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('🚨 [CRÍTICO] Excepción no capturada en el hilo principal:', error.message);
+  console.error(error.stack);
+});
 
 if (require.main === module) {
   startServer();
