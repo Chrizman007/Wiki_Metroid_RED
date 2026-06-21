@@ -525,55 +525,75 @@ router.put('/:id', verificarPermisos(['administrador']), async (req, res) => {
 
 
 // ==========================================
-// 6. SERVIDOR gRPC
+// 6. SERVICIOS gRPC (Streaming y Carga)
 // ==========================================
 const subirImagenHandler = (call, callback) => {
   let archivoNombre = '';
   let articuloId = '';
-  let chunks = [];
+  let fileBuffer = [];
 
   call.on('data', (request) => {
-    articuloId = request.articuloId;
-    archivoNombre = request.nombreArchivo;
-    chunks.push(request.chunk); 
+    if (request.articuloId) articuloId = request.articuloId;
+    if (request.nombreArchivo) archivoNombre = request.nombreArchivo;
+    if (request.chunk) fileBuffer.push(request.chunk);
   });
 
   call.on('end', async () => {
     try {
-      const archivoCompleto = Buffer.concat(chunks);
+      const archivoCompleto = Buffer.concat(fileBuffer);
       const directorioPublico = path.join(__dirname, '../../public/imagenes');
       
       if (!fs.existsSync(directorioPublico)) {
           fs.mkdirSync(directorioPublico, { recursive: true });
       }
 
-      const rutaDestino = path.join(directorioPublico, archivoNombre);
-      fs.writeFileSync(rutaDestino, archivoCompleto);
+      const nombreSeguro = archivoNombre.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+      const rutaDestino = path.join(directorioPublico, nombreSeguro);
       
-      console.log(`📦 [gRPC] Archivo guardado con éxito: ${archivoNombre}`);
+      fs.writeFileSync(rutaDestino, archivoCompleto);
+      console.log(`[gRPC] Archivo guardado con éxito: ${nombreSeguro}`);
 
-      const rutaPublica = `http://localhost:${config.port}/articulos/public/imagenes/${archivoNombre}`;
-
-      try {
-        await Articulo.findByIdAndUpdate(articuloId, { imagen: rutaPublica });
-        console.log(`✅ [gRPC] Registro actualizado con imagen URL: ${rutaPublica}`);
-      } catch (updateError) {
-        console.warn(`⚠️ No se pudo actualizar el artículo:`, updateError.message);
+      if (articuloId) {
+          try {
+            await Articulo.findByIdAndUpdate(articuloId, { imagen: nombreSeguro });
+            console.log(`[gRPC] BD actualizada con imagen: ${nombreSeguro}`);
+          } catch (updateError) {
+            console.warn(`Error BD:`, updateError.message);
+          }
       }
 
       callback(null, {
         exito: true,
-        mensaje: "Archivo recibido y guardado correctamente.",
-        urlImagen: rutaPublica
+        mensaje: "Archivo guardado.",
+        urlImagen: nombreSeguro
       });
 
     } catch (error) {
-      console.error(" Fallo en gRPC:", error);
-      callback({
-        code: grpc.status.INTERNAL,
-        message: `Error interno al guardar: ${error.message}`
-      });
+      console.error("Fallo en gRPC:", error);
+      callback({ code: grpc.status.INTERNAL, message: error.message });
     }
+  });
+};
+
+const descargarImagenHandler = (call) => {
+  const nombreArchivo = call.request.nombreArchivo;
+  if (!nombreArchivo) {
+    return call.emit('error', { code: grpc.status.INVALID_ARGUMENT, details: 'Falta nombre' });
+  }
+
+  const nombreSeguro = nombreArchivo.replace(/[^a-zA-Z0-9.\-_]/g, '_');
+  const directorioPublico = path.join(__dirname, '../../public/imagenes');
+  const rutaCompleta = path.join(directorioPublico, nombreSeguro);
+
+  if (!fs.existsSync(rutaCompleta)) {
+    return call.emit('error', { code: grpc.status.NOT_FOUND, details: 'Imagen no existe' });
+  }
+
+  const readStream = fs.createReadStream(rutaCompleta, { highWaterMark: 1024 * 64 });
+  readStream.on('data', (chunk) => call.write({ chunk }));
+  readStream.on('end', () => call.end());
+  readStream.on('error', (error) => {
+    call.emit('error', { code: grpc.status.INTERNAL, details: 'Error de lectura' });
   });
 };
 
@@ -601,19 +621,21 @@ async function startServer() {
     
     app.listen(config.port, () => {
       console.log(`🌐 Metroid Wiki Article Service (REST) running on port ${config.port}`);
-      console.log(`📚 Swagger docs available at: http://localhost:${config.port}/articulos/api-docs`);
     });
 
     const grpcServer = new grpc.Server();
-    grpcServer.addService(mediaProto.MediaService.service, { SubirImagen: subirImagenHandler });
+    grpcServer.addService(mediaProto.MediaService.service, { 
+      SubirImagen: subirImagenHandler,
+      DescargarImagen: descargarImagenHandler
+    });
     
-    grpcServer.bindAsync('0.0.0.0:3003', grpc.ServerCredentials.createInsecure(), (err, port) => {
+    grpcServer.bindAsync('0.0.0.0:50051', grpc.ServerCredentials.createInsecure(), (err, port) => {
       if (err) {
         console.error('No se pudo arrancar el servidor gRPC:', err);
         return;
       }
       grpcServer.start();
-      console.log(`📸 Servidor gRPC (Multimedia) corriendo en el puerto: ${port}`);
+      console.log(`📸 Servidor gRPC (Multimedia) corriendo MUNDIALMENTE en el puerto: ${port}`);
     });
 
   } catch (error) {

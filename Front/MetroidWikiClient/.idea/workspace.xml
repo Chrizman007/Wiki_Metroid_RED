@@ -6,8 +6,6 @@
   <component name="ChangeListManager">
     <list default="true" id="76729f87-e3b1-46f5-89c0-37e6991e75e2" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/GrpcMediaClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/GrpcMediaClient.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/RetrofitClient.java" beforeDir="false" afterPath="$PROJECT_DIR$/src/main/java/com/metroidwiki/network/RetrofitClient.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -87,7 +85,7 @@
       <workItem from="1781814031873" duration="9609000" />
       <workItem from="1781824562987" duration="713000" />
       <workItem from="1781892983631" duration="6066000" />
-      <workItem from="1781986389414" duration="4908000" />
+      <workItem from="1781986389414" duration="5854000" />
     </task>
     <servers />
   </component>
