@@ -47,7 +47,6 @@ const usuarioSchema = new mongoose.Schema({
   nombre: { type: String, required: true },
   correo: { type: String, required: true, unique: true },
   password: { type: String, required: true },
-  // Actualizado a los 3 roles oficiales solicitados en minúsculas para consistencia
   rol: { type: String, enum: ['lector', 'administrador', 'desarrollador'], default: 'lector' },
   fechaRegistro: { type: Date, default: Date.now }
 });
@@ -117,7 +116,7 @@ const AuthLogicService = {
       nombre: datos.nombre,
       correo: datos.correo,
       password: datos.password,
-      rol: datos.rol || 'lector' 
+      rol: datos.rol ? datos.rol.toLowerCase() : 'lector'
     });
 
     await nuevoUsuario.save();
@@ -162,8 +161,28 @@ function manejarExcepcionAuthHTTP(error, res) {
       message: error.message
     });
   }
+
+  if (error.name === 'ValidationError') {
+    console.error('🚨 [Auth Mongoose] Error de validación detectado:', error.message);
+    return res.status(400).json({
+      error: 'FormatoDatosInvalido',
+      message: 'Los datos enviados no cumplen con las reglas de validación del sistema (ej. rol no permitido).'
+    });
+  }
+
+  if (error.code === 11000) {
+    console.error('🚨 [Auth Mongo] Intento de registro duplicado concurrente:', error.message);
+    return res.status(409).json({
+      error: 'UsuarioDuplicado',
+      message: 'El correo electrónico ya ha sido registrado por otro usuario.'
+    });
+  }
+
   console.error('Excepcion no controlada en Auth:', error);
-  res.status(500).json({ error: 'ErrorCriticoDelServidor', message: 'Error interno en autenticación.' });
+  res.status(500).json({
+    error: 'ErrorCriticoDelServidor',
+    message: 'Error interno en autenticación.'
+  });
 }
 
 /**
@@ -253,10 +272,22 @@ router.post('/login', async (req, res) => {
 // ==========================================
 async function startAuthServer() {
   try {
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ [MongoDB Atlas - Auth] Error de conexión en la nube:', err.message);
+    });
 
-    console.log("Ruta REAL de conexión:", config.mongoUri);
-    await mongoose.connect(config.mongoUri);
-    console.log('¡Conectado exitosamente a MongoDB Atlas en la nube!');
+    mongoose.connection.on('disconnected', () => {
+      console.warn('⚠️ [MongoDB Atlas - Auth] Conexión perdida. Intentando reestablecer...');
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      console.log('✨ [MongoDB Atlas - Auth] Conexión reestablecida con éxito.');
+    });
+
+    await mongoose.connect(config.mongoUri, {
+      serverSelectionTimeoutMS: 5000
+    });
+    console.log('¡Conectado exitosamente a MongoDB Atlas (Auth)!');
     
     const app = express();
     app.use(express.json());
@@ -272,6 +303,15 @@ async function startAuthServer() {
     process.exit(1);
   }
 }
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 [Auth Proceso] Rechazo asíncrono no manejado:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('🚨 [Auth Proceso] Excepción síncrona no capturada:', error.message);
+  console.error(error.stack);
+});
 
 if (require.main === module) {
   startAuthServer();
