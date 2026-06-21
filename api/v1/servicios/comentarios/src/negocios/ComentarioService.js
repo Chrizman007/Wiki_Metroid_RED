@@ -71,19 +71,46 @@ class ComentarioDTO {
 const verificarPermisos = (rolesPermitidos) => {
   return (req, res, next) => {
     const authHeader = req.headers['authorization'] || req.headers['Authorization'];
-    if (!authHeader) return res.status(403).json({ message: 'No se proporcionó token' });
+    if (!authHeader) {
+      return res.status(403).json({ 
+        error: 'NoTokenProvided', 
+        message: 'No se proporcionó un token de seguridad.' 
+      });
+    }
 
     try {
       let token = authHeader;
-      if (authHeader.toLowerCase().startsWith('bearer ')) token = authHeader.split(' ')[1];
+      if (authHeader.toLowerCase().startsWith('bearer ')) {
+        token = authHeader.split(' ')[1];
+      }
+
       const decoded = jwt.verify(token, process.env.JWT_SECRET);
       req.user = decoded;
+
       if (rolesPermitidos && !rolesPermitidos.includes(decoded.rol)) {
-        return res.status(403).json({ message: `Acceso denegado: requiere rol [${rolesPermitidos.join(', ')}]` });
+        return res.status(403).json({ 
+          error: 'UnauthorizedRole',
+          message: `Acceso denegado: Requiere rol [${rolesPermitidos.join(', ')}].` 
+        });
       }
       next();
     } catch (err) {
-      return res.status(401).json({ message: 'Token inválido o expirado', detalle: err.message });
+      if (err.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          error: 'TokenExpired',
+          message: 'La sesión ha expirado.'
+        });
+      }
+      if (err.name === 'JsonWebTokenError') {
+        return res.status(401).json({
+          error: 'InvalidToken',
+          message: 'El token proporcionado es inválido.'
+        });
+      }
+      return res.status(401).json({ 
+        error: 'AuthError', 
+        message: 'Fallo la autenticación del usuario.' 
+      });
     }
   };
 };
@@ -237,7 +264,21 @@ module.exports = { router, config };
 
 async function startServer() {
   try {
-    await mongoose.connect(config.mongoUri);
+    mongoose.connection.on('error', (err) => {
+      console.error('❌ [MongoDB Atlas - Comentarios] Error crítico de conexión en la nube:', err.message);
+    });
+
+    mongoose.connection.on('disconnected', () => {
+      console.warn('⚠️ [MongoDB Atlas - Comentarios] Conexión interrumpida con el clúster. Reintentando automáticamente...');
+    });
+
+    mongoose.connection.on('reconnected', () => {
+      console.log('✨ [MongoDB Atlas - Comentarios] ¡Conexión restablecida con éxito!');
+    });
+
+    await mongoose.connect(config.mongoUri, {
+      serverSelectionTimeoutMS: 5000
+    });
     console.log('Conectado a MongoDB Atlas (Comentarios)');
 
     const app = express();
@@ -254,5 +295,14 @@ async function startServer() {
     process.exit(1);
   }
 }
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 [Comentarios Crítico] Rechazo asíncrono no manejado:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('🚨 [Comentarios Crítico] Excepción síncrona no capturada:', error.message);
+  console.error(error.stack);
+});
 
 if (require.main === module) startServer();
