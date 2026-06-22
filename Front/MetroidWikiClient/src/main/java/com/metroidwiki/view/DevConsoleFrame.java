@@ -1,6 +1,8 @@
 package com.metroidwiki.view;
 
 import com.metroidwiki.network.RetrofitClient;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.metroidwiki.exception.ErrorConsumoAPIException;
 
 import javax.swing.*;
@@ -126,15 +128,32 @@ public class DevConsoleFrame extends JFrame {
                     HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
 
                     if (response.statusCode() != 200) {
-                        throw new ErrorConsumoAPIException("El servidor respondió con código de error", response.statusCode());
+                        String cuerpoError = response.body();
+                        String errorBackend = "HttpError_" + response.statusCode();
+
+                        try {
+                            JsonObject jsonObject = new Gson().fromJson(cuerpoError, JsonObject.class);
+                            if (jsonObject != null && jsonObject.has("error")) {
+                                errorBackend = jsonObject.get("error").getAsString();
+                            }
+                        } catch (com.google.gson.JsonSyntaxException e) {
+                            System.err.println("🚨 [DevConsole] Error de sintaxis al parsear JSON. La respuesta no es un JSON válido.");
+                            System.err.println("Cuerpo recibido: " + cuerpoError);
+                            errorBackend = "NonJsonResponseBody";
+                        } catch (Exception e) {
+                            System.err.println("🚨 [DevConsole] Error inesperado en el procesamiento de la respuesta fallida: " + e.getMessage());
+                            errorBackend = "UnparseableResponseBody";
+                        }
+
+                        throw new ErrorConsumoAPIException("El servidor respondió con código de error", response.statusCode(), errorBackend);
                     }
 
                     return response.body();
                 } catch (InterruptedException ex) {
                     Thread.currentThread().interrupt();
-                    throw new ErrorConsumoAPIException("Conexión interrumpida por el sistema", 500);
+                    throw new ErrorConsumoAPIException("Conexión interrumpida por el sistema", 500, "SystemInterrupted");
                 } catch (java.io.IOException ex) {
-                    throw new ErrorConsumoAPIException("Fallo crítico de comunicación física con el API Gateway", 500);
+                    throw new ErrorConsumoAPIException("Fallo crítico de comunicación física con el API Gateway", 500, "GatewayUnreachable");
                 }
             }
 
@@ -149,7 +168,10 @@ public class DevConsoleFrame extends JFrame {
                 } catch (ExecutionException ee) {
                     if (ee.getCause() instanceof ErrorConsumoAPIException) {
                         ErrorConsumoAPIException exEspecifica = (ErrorConsumoAPIException) ee.getCause();
-                        txtJsonOutput.setText("RUPTURA DE PROTOCOLO HTTP:\n" + exEspecifica.getMessage() + "\nCódigo HTTP recibido: " + exEspecifica.getCodigoRespuesta());
+                        txtJsonOutput.setText("🚨 RUPTURA DE PROTOCOLO HTTP 🚨"
+                                + "\n\nMensaje: " + exEspecifica.getMessage()
+                                + "\nIdentificador (error): " + exEspecifica.getErrorBackend()
+                                + "\nCódigo Estado HTTP: " + exEspecifica.getCodigoRespuesta());
                     } else {
                         txtJsonOutput.setText("❌ Error desconocido en la consola interna.");
                     }
